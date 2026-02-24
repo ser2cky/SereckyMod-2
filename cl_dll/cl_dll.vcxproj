@@ -171,6 +171,7 @@
     <ClCompile Include="hl\hl_objects.cpp" />
     <ClCompile Include="hl\hl_weapons.cpp" />
     <ClCompile Include="hud.cpp" />
+    <ClCompile Include="hud_drawfont.cpp" />
     <ClCompile Include="hud_msg.cpp" />
     <ClCompile Include="hud_redraw.cpp" />
     <ClCompile Include="hud_servers.cpp" />
@@ -187,6 +188,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="parsemsg.cpp" />
+    <ClCompile Include="particledan\particledan3.cpp" />
     <ClCompile Include="saytext.cpp" />
     <ClCompile Include="statusbar.cpp" />
     <ClCompile Include="status_icons.cpp" />
@@ -231,6 +233,7 @@
     <ClInclude Include="ev_hldm.h" />
     <ClInclude Include="GameStudioModelRenderer.h" />
     <ClInclude Include="health.h" />
+    <ClInclude Include="hlfont.h" />
     <ClInclude Include="hud.h" />
     <ClInclude Include="hud_iface.h" />
     <ClInclude Include="hud_servers.h" />
@@ -240,6 +243,7 @@
     <ClInclude Include="kbutton.h" />
     <ClInclude Include="overview.h" />
     <ClInclude Include="parsemsg.h" />
+    <ClInclude Include="particledan\particledan.h" />
     <ClInclude Include="StudioModelRenderer.h" />
     <ClInclude Include="studio_util.h" />
     <ClInclude Include="util.h" />

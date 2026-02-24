@@ -18,8 +18,9 @@
 #include <math.h>
 #include "hud.h"
 #include "cl_util.h"
-
+#include "r_studioint.h"
 #include "vgui_TeamFortressViewport.h"
+#include "hlfont.h"
 
 #define MAX_LOGO_FRAMES 56
 
@@ -30,7 +31,7 @@ int grgLogoFrame[MAX_LOGO_FRAMES] =
 	29, 29, 29, 29, 29, 28, 27, 26, 25, 24, 30, 31 
 };
 
-
+extern engine_studio_api_t IEngineStudio;
 extern int g_iVisibleMouse;
 
 float HUD_GetFOV( void );
@@ -44,9 +45,9 @@ extern cvar_t *sensitivity;
 
 float clamp( float min, float val, float max )
 {
-	if (val < min)
+	if (val <= min)
 		val = min;
-	if (val > max)
+	if (val >= max)
 		val = max;
 	return val;
 }
@@ -57,6 +58,8 @@ float clamp( float min, float val, float max )
 
 float CHud::GetXScale( void )
 {
+	if ( !IEngineStudio.IsHardware() )
+		return 1.0f;
 	return clamp(1.0f, m_pCvarScale->value, ScreenWidth / 640.0f);
 }
 
@@ -66,6 +69,8 @@ float CHud::GetXScale( void )
 
 float CHud::GetYScale( void )
 {
+	if ( !IEngineStudio.IsHardware() )
+		return 1.0f;
 	return clamp(1.0f, m_pCvarScale->value, ScreenHeight / 480.0f);
 }
 
@@ -270,7 +275,8 @@ int CHud :: DrawHudString(int xpos, int ypos, int iMaxX, char *szIt, int r, int 
 		if ( next > iMaxX )
 			return xpos;
 
-		TextMessageDrawChar( xpos, ypos, *szIt, r, g, b );
+		//TextMessageDrawChar( xpos, ypos, *szIt, r, g, b );
+		gFont.DrawCharacter( gFont.gCreditsFont, xpos, ypos, *szIt, r, g, b, 0, kRenderTransAdd );
 		xpos = next;		
 	}
 
@@ -302,7 +308,8 @@ int CHud :: DrawHudStringReverse( int xpos, int ypos, int iMinX, char *szString,
 			return xpos;
 		xpos = next;
 
-		TextMessageDrawChar( xpos, ypos, *szIt, r, g, b );
+		//TextMessageDrawChar( xpos, ypos, *szIt, r, g, b );
+		gFont.DrawCharacter( gFont.gCreditsFont, xpos, ypos, *szIt, r, g, b, 0, kRenderTransAdd );
 	}
 
 	return xpos;

@@ -48,6 +48,7 @@ extern void TriApi_DrawSprite( int frame, int x, int y, const wrect_t* prc );
 extern void TriApi_DrawHoles( int frame, int x, int y, const wrect_t* prc );
 extern void TriApi_DrawAdditive( int frame, int x, int y, const wrect_t* prcSubRect );
 extern void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a, int rendermode = kRenderTransAdd );
+extern void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, float fLeft, float fRight, float fTop, float fBottom );
 
 #define SPR_Load (*gEngfuncs.pfnSPR_Load)
 #define SPR_Set (*TriApi_SetSprite)

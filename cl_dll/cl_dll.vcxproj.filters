@@ -41,6 +41,9 @@
     <Filter Include="Source Files\HL_DLL\Weapons">
       <UniqueIdentifier>{224e77c7-e073-4c64-93e1-ff73096bc64c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\ParticleDan">
+      <UniqueIdentifier>{21663f58-d100-4f3c-9605-300b27a82336}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="hl\hl_baseentity.cpp">
@@ -298,6 +301,12 @@
     <ClCompile Include="hud_triapi.cpp">
       <Filter>Source Files\Hud</Filter>
     </ClCompile>
+    <ClCompile Include="particledan\particledan3.cpp">
+      <Filter>Source Files\ParticleDan</Filter>
+    </ClCompile>
+    <ClCompile Include="hud_drawfont.cpp">
+      <Filter>Source Files\Hud</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ammo.h">
@@ -428,6 +437,12 @@
     </ClInclude>
     <ClInclude Include="parsemsg.h">
       <Filter>Source Files\Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="particledan\particledan.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hlfont.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

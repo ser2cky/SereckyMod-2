@@ -31,6 +31,7 @@
 #include "com_model.h"
 #include "r_studioint.h"
 #include "triangleapi.h"
+#include "hlfont.h"
 
 extern engine_studio_api_t IEngineStudio;
 model_s *gpSprite;
@@ -93,7 +94,7 @@ void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, f
 {
 	AdjustTransformations( &x, &y, &w, &h );
 
-	gEngfuncs.Con_Printf("%.2f %.2f %.2f %.2f\n", fLeft, fRight, fTop, fBottom);
+	//gEngfuncs.Con_Printf("%.2f %.2f %.2f %.2f\n", fLeft, fRight, fTop, fBottom);
 
 	gEngfuncs.pTriAPI->Begin( TRI_QUADS );
 
@@ -111,26 +112,6 @@ void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, f
 
 	gEngfuncs.pTriAPI->End();
 	gEngfuncs.pTriAPI->RenderMode( kRenderNormal );
-}
-
-//=======================================
-//	TriApi_SetSprite
-//=======================================
-
-void TriApi_SetSprite( HSPRITE hPic, int r, int g, int b )
-{
-	float r_, g_, b_;
-
-	if ( !IEngineStudio.IsHardware() )
-	{
-		gEngfuncs.pfnSPR_Set( hPic, r, g, b );
-		return;
-	}
-
-	gpSprite = (model_s*)gEngfuncs.GetSpritePointer( hPic );
-	r_ = r; b_ = b; g_ = g;
-	RGBAToColor4f(&r_, &g_, &b_, NULL);
-	gEngfuncs.pTriAPI->Color4f( r_, g_, b_, 1.0f );
 }
 
 //=======================================
@@ -229,6 +210,26 @@ void TriApi_DrawFrame( mspriteframe_t* pFrame, int x, int y, const wrect_t* prcS
 		AdjustSubRect(pFrame, &fLeft, &fRight, &fTop, &fBottom, &iWidth, &iHeight, prcSubRect);
 
 	DrawQuad( x, y, iWidth, iHeight, fLeft, fRight, fTop, fBottom );
+}
+
+//=======================================
+//	TriApi_SetSprite
+//=======================================
+
+void TriApi_SetSprite( HSPRITE hPic, int r, int g, int b )
+{
+	float r_, g_, b_;
+
+	if ( !IEngineStudio.IsHardware() )
+	{
+		gEngfuncs.pfnSPR_Set( hPic, r, g, b );
+		return;
+	}
+
+	gpSprite = (model_s*)gEngfuncs.GetSpritePointer( hPic );
+	r_ = r; b_ = b; g_ = g;
+	RGBAToColor4f(&r_, &g_, &b_, NULL);
+	gEngfuncs.pTriAPI->Color4f( r_, g_, b_, 1.0f );
 }
 
 //=======================================
@@ -344,6 +345,7 @@ void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, 
 
 void DrawTest( void )
 {
+	gFont.DrawString( gFont.gCreditsFont, gHUD.m_iScreenWidth/2, gHUD.m_iScreenHeight/2, 255, 128, 0, 0, kRenderTransAdd, "panther-eye nation rise up" );
 #if 0
 	if (gHUD.m_pCvarScale)
 	{
