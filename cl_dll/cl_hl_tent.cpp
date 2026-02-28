@@ -13,45 +13,42 @@
 *
 ****/
 
-//=======================================
+//====================================================================
 //	cl_hl_tent.cpp
 //	Purpose: Let people modify Temp-Ents
 //	to their heart's content. Code taken from
-//	the Half-Life NetTest reverse engineer.
+//	the Half-Life NetTest reverse engineer, and
+//	Xash3D FWGS...
 //
 //	History:
 //	FEB-22-26: Started
+//	FEB-24-26: moved all temp-ents into a class
+//	so people can simply call them from the
+//	"gTempEnt" global, like how you'd call something
+//	from the pEfxApi...
+//	FEB-26-26: added more
 //
-//=======================================
+//====================================================================
 
 #include "hud.h"
 #include "cl_util.h"
 #include "com_model.h"
-#include "r_studioint.h"
-#include "r_efx.h"
 #include "event_api.h"
+#include "r_efx.h"
+#include "r_studioint.h"
 #include "parsemsg.h"
+#include "cl_hl_tent.h"
+#include "entity_types.h"
 
-cvar_t*		r_decals;
-int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf);
+#include "studio_util.h"
+#include "studio.h"
+#include "StudioModelRenderer.h"
+#include "GameStudioModelRenderer.h"
 
-// particle ramps
-int		ramp1[8] = { 0x6F, 0x6D, 0x6B, 0x69, 0x67, 0x65, 0x63, 0x61 };
-int		ramp2[8] = { 0x6F, 0x6E, 0x6D, 0x6C, 0x6B, 0x6A, 0x68, 0x66 };
-int		ramp3[8] = { 0x6D, 0x6B, 6, 5, 4, 3, 0, 0 };
+extern engine_studio_api_t IEngineStudio;
+extern CGameStudioModelRenderer g_StudioRenderer;
 
-// spark ramps
-int		gSparkRamp[9] = { 0xFE, 0xFD, 0xFC, 0x6F, 0x6E, 0x6D, 0x6C, 0x67, 0x60 };
-
-//=======================================
-//	TempEnt_Init
-//=======================================
-
-void TempEnt_Init( void )
-{
-	r_decals = gEngfuncs.pfnGetCvarPointer("r_decals");
-	HOOK_MESSAGE(ParseTEnt);
-}
+CTempEntities gTempEnt;
 
 //=======================================
 //	S_StartDynamicSound
@@ -64,13 +61,155 @@ void S_StartDynamicSound( int entnum, int entchannel, const char *sample, vec_t*
 	gEngfuncs.pEventAPI->EV_PlaySound( entnum, (float*)origin, entchannel, sample, fvol, attenuation, flags, pitch );
 }
 
-/*
-===============
-R_ParticleExplosion
+//=======================================
+//	ParseTEnt
+//=======================================
 
-===============
-*/
-void R_ParticleExplosion( vec_t* org )
+int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
+{
+	return gTempEnt.MsgFunc_ParseTEnt( pszName, iSize, pbuf );
+}
+
+//=======================================
+//	Init
+//=======================================
+
+void CTempEntities::Init( void )
+{
+	m_pCvarDecals = gEngfuncs.pfnGetCvarPointer( "r_decals" );
+	m_pCvarTracerSpeed = gEngfuncs.pfnGetCvarPointer( "tracer_speed" );
+	m_pCvarTracerOffset = gEngfuncs.pfnGetCvarPointer( "tracer_offset" );
+	HOOK_MESSAGE( ParseTEnt );
+}
+
+//=======================================
+//	VidInit
+//=======================================
+
+void CTempEntities::VidInit( void )
+{
+	int i;
+	char* disk_basepal;
+
+	disk_basepal = (char*)gEngfuncs.COM_LoadFile("gfx/palette.lmp", 1, NULL);
+
+	if (!disk_basepal)
+	{
+		gEngfuncs.pfnConsolePrint("Couldn't load gfx/palette.lmp");
+	}
+	else
+	{
+		host_basepal = (unsigned short*)malloc(sizeof(PackedColorVec) * 256);
+
+		for (i = 0; i < 256; i++)
+		{
+			host_basepal[i * 4 + 0] = disk_basepal[i * 3 + 2];
+			host_basepal[i * 4 + 1] = disk_basepal[i * 3 + 1];
+			host_basepal[i * 4 + 2] = disk_basepal[i * 3 + 0];
+			host_basepal[i * 4 + 3] = 0;
+		}
+	}
+
+	cl_sprite_muzzleflash[0] = IEngineStudio.Mod_ForName("sprites/muzzleflash1.spr", 0);
+	cl_sprite_muzzleflash[1] = IEngineStudio.Mod_ForName("sprites/muzzleflash2.spr", 0);
+	cl_sprite_muzzleflash[2] = IEngineStudio.Mod_ForName("sprites/muzzleflash3.spr", 0);
+
+	cl_sprite_ricochet = IEngineStudio.Mod_ForName("sprites/richo1.spr", 0);
+	cl_sprite_shell = IEngineStudio.Mod_ForName("sprites/wallpuff.spr", 0);
+}
+
+//=======================================
+//	Shutdown
+//=======================================
+
+void CTempEntities::Shutdown( void )
+{
+	if ( host_basepal )
+		free( host_basepal );
+}
+
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_TracerEffect( vec_t* start, vec_t* end )
+{
+	vec3_t	temp, vel;
+	float	len;
+
+	if ( m_pCvarTracerSpeed->value <= 0 )
+		m_pCvarTracerSpeed->value = 3;
+
+	VectorSubtract(end, start, temp);
+	len = Length(temp);
+
+	VectorScale(temp, 1.0 / len, temp);
+	VectorScale(temp, gEngfuncs.pfnRandomLong(-10, 9) + m_pCvarTracerOffset->value, vel);
+	VectorAdd(start, vel, start);
+	VectorScale(temp, m_pCvarTracerSpeed->value, vel);
+
+	gEngfuncs.pEfxAPI->R_TracerParticles( start, vel, len / m_pCvarTracerSpeed->value );
+}
+
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_Implosion( vec_t* end, float radius, int count, float life )
+{
+	int		i;
+	vec3_t	start, temp;
+	vec3_t	vel;
+
+	for (i = 0; i < count; i++)
+	{
+		temp[0] = (radius / 100) * gEngfuncs.pfnRandomFloat(-100, 100);
+		temp[1] = (radius / 100) * gEngfuncs.pfnRandomFloat(-100, 100);
+		temp[2] = (radius / 100) * gEngfuncs.pfnRandomFloat(0, 100);
+
+		VectorAdd(temp, end, start);
+		VectorScale(temp, -1.0 / life, vel);
+
+		gEngfuncs.pEfxAPI->R_TracerParticles(start, vel, life);
+	}
+}
+
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_StreakSplash( vec_t* pos, vec_t* dir, int color, int count, float speed, int velocityMin, int velocityMax )
+{
+	int		i, j;
+	particle_t* p;
+	vec3_t	initialVelocity;
+
+	VectorScale(dir, speed, initialVelocity);
+
+	for (i = 0; i < count; i++)
+	{
+		if ( ( p = gEngfuncs.pEfxAPI->R_TracerParticles( vec3_origin, vec3_origin, 1.0f ) ) == NULL )
+			return;
+
+		p->color = color;
+		p->packedColor = 255;
+		p->type = pt_grav;
+		p->die = gEngfuncs.GetClientTime() + gEngfuncs.pfnRandomFloat(0.1, 0.5);
+		p->ramp = 1;
+
+		for (j = 0; j < 3; j++)
+		{
+			p->org[j] = pos[j];
+			p->vel[j] = initialVelocity[j] + gEngfuncs.pfnRandomFloat(velocityMin, velocityMax);
+		}
+	}
+}
+
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_ParticleExplosion( vec_t* org )
 {
 	int			i, j;
 	particle_t* p;
@@ -128,13 +267,11 @@ void R_ParticleExplosion( vec_t* org )
 	}
 }
 
-/*
-===============
-R_ParticleExplosion2
+//=======================================
+//	Function Name
+//=======================================
 
-===============
-*/
-void R_ParticleExplosion2( vec_t* org, int colorStart, int colorLength )
+void CTempEntities::R_ParticleExplosion2( vec_t* org, int colorStart, int colorLength )
 {
 	int			i, j;
 	particle_t* p;
@@ -161,13 +298,11 @@ void R_ParticleExplosion2( vec_t* org, int colorStart, int colorLength )
 	}
 }
 
-/*
-===============
-R_BlobExplosion
+//=======================================
+//	Function Name
+//=======================================
 
-===============
-*/
-void R_BlobExplosion( vec_t* org )
+void CTempEntities::R_BlobExplosion( vec_t* org )
 {
 	int			i, j;
 	particle_t* p;
@@ -210,7 +345,7 @@ void R_BlobExplosion( vec_t* org )
 //	R_RunParticleEffect
 //=======================================
 
-void R_RunParticleEffect( vec_t* org, vec_t* dir, int color, int count )
+void CTempEntities::R_RunParticleEffect( vec_t* org, vec_t* dir, int color, int count )
 {
 	int		i, j;
 	particle_t* p;
@@ -263,12 +398,11 @@ void R_RunParticleEffect( vec_t* org, vec_t* dir, int color, int count )
 	}
 }
 
-/*
-===============
-R_FlickerParticles
-===============
-*/
-void R_FlickerParticles( vec_t* org )
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_FlickerParticles( vec_t* org )
 {
 	int		i, j;
 	particle_t* p;
@@ -294,13 +428,11 @@ void R_FlickerParticles( vec_t* org )
 	}
 }
 
-/*
-===============
-R_LavaSplash
+//=======================================
+//	Function Name
+//=======================================
 
-===============
-*/
-void R_LavaSplash( vec_t* org )
+void CTempEntities::R_LavaSplash( vec_t* org )
 {
 	int			i, j, k;
 	particle_t* p;
@@ -337,12 +469,11 @@ void R_LavaSplash( vec_t* org )
 	}
 }
 
-/*
-===============
-R_LargeFunnel
-===============
-*/
-void R_LargeFunnel( vec_t* org, int reverse )
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_LargeFunnel( vec_t* org, int reverse )
 {
 	int			i, j;
 	particle_t* p;
@@ -402,14 +533,11 @@ void R_LargeFunnel( vec_t* org, int reverse )
 	}
 }
 
-/*
-===============
-R_TeleportSplash
+//=======================================
+//	Function Name
+//=======================================
 
-Quake1 teleport splash
-===============
-*/
-void R_TeleportSplash( vec_t* org )
+void CTempEntities::R_TeleportSplash( vec_t* org )
 {
 	int			i, j, k;
 	particle_t* p;
@@ -446,12 +574,11 @@ void R_TeleportSplash( vec_t* org )
 	}
 }
 
-/*
-===============
-R_ShowLine
-===============
-*/
-void R_ShowLine( vec_t* start, vec_t* end )
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_ShowLine( vec_t* start, vec_t* end )
 {
 	vec3_t		vec;
 	float		len;
@@ -483,13 +610,11 @@ void R_ShowLine( vec_t* start, vec_t* end )
 	}
 }
 
-/*
-===============
-R_BloodStream
+//=======================================
+//	Function Name
+//=======================================
 
-===============
-*/
-void R_BloodStream( vec_t* org, vec_t* dir, int pcolor, int speed )
+void CTempEntities::R_BloodStream( vec_t* org, vec_t* dir, int pcolor, int speed )
 {
 	// Add our particles
 	vec3_t	dirCopy;
@@ -571,13 +696,11 @@ void R_BloodStream( vec_t* org, vec_t* dir, int pcolor, int speed )
 	}
 }
 
-/*
-===============
-R_Blood
+//=======================================
+//	Function Name
+//=======================================
 
-===============
-*/
-void R_Blood( vec_t* org, vec_t* dir, int pcolor, int speed )
+void CTempEntities::R_Blood( vec_t* org, vec_t* dir, int pcolor, int speed )
 {
 	vec3_t	dirCopy;
 	vec3_t	orgCopy;
@@ -623,12 +746,11 @@ void R_Blood( vec_t* org, vec_t* dir, int pcolor, int speed )
 	}
 }
 
-/*
-===============
-R_RocketTrail
-===============
-*/
-void R_RocketTrail( vec_t *start, vec_t *end, int type )
+//=======================================
+//	Function Name
+//=======================================
+
+void CTempEntities::R_RocketTrail( vec_t *start, vec_t *end, int type )
 {
 	vec3_t	vec, right, up;
 	float	len;
@@ -769,11 +891,939 @@ void R_RocketTrail( vec_t *start, vec_t *end, int type )
 }
 
 //=======================================
+//	TEMP-ENTITY CODE STARTS PAST THIS POINT...
+//=======================================
+
+int ModelFrameCount( model_t* model )
+{
+	int count;
+
+	count = 1;
+
+	if (model)
+	{
+		if (model->type == mod_sprite)
+		{
+			msprite_t* psprite;
+
+			psprite = (msprite_t*)model->cache.data;
+			count = psprite->numframes;
+		}
+		else if (model->type == mod_studio)
+		{
+			count = g_StudioRenderer.StudioBodyVariations(model);
+			count = 0;
+		}
+
+		if (count < 1)
+			count = 1;
+	}
+
+	return count;
+}
+
+//=======================================
+//	R_FizzEffect
+//	Create a fizz effect
+//=======================================
+
+void CTempEntities::R_FizzEffect( cl_entity_t* pent, int modelIndex, int density )
+{
+	TEMPENTITY* pTemp;
+	model_t* model;
+	int				i, width, depth, count, frameCount;
+	float			maxHeight, speed, xspeed, yspeed, zspeed;
+	vec3_t			origin;
+
+	if (!pent->model || !modelIndex)
+		return;
+
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!model)
+		return;
+
+	count = density + 1;
+
+	maxHeight = pent->model->maxs[2] - pent->model->mins[2];
+	width = pent->model->maxs[0] - pent->model->mins[0];
+	depth = pent->model->maxs[1] - pent->model->mins[1];
+	speed = (float)pent->baseline.rendercolor.r * 256.0 + (float)pent->baseline.rendercolor.g;
+	if (pent->baseline.rendercolor.b)
+		speed = -speed;
+
+	xspeed = cos(pent->angles[YAW] * M_PI / 180) * speed;
+	yspeed = sin(pent->angles[YAW] * M_PI / 180) * speed;
+
+	frameCount = ModelFrameCount(model);
+
+	for (i = 0; i < count; i++)
+	{
+		origin[0] = pent->model->mins[0] + gEngfuncs.pfnRandomLong(0, width - 1);
+		origin[1] = pent->model->mins[1] + gEngfuncs.pfnRandomLong(0, depth - 1);
+		origin[2] = pent->model->mins[2];
+		pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(origin, model);
+		if (!pTemp)
+			return;
+
+		pTemp->flags |= FTENT_SINEWAVE;
+
+		pTemp->x = origin[0];
+		pTemp->y = origin[1];
+
+		zspeed = gEngfuncs.pfnRandomLong(80, 140);
+		pTemp->entity.baseline.origin[0] = xspeed;
+		pTemp->entity.baseline.origin[1] = yspeed;
+		pTemp->entity.baseline.origin[2] = zspeed;
+		pTemp->die = gEngfuncs.GetClientTime() + (maxHeight / zspeed) - 0.1;
+		pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+		// Set sprite scale
+		pTemp->entity.curstate.scale = 1.0 / gEngfuncs.pfnRandomFloat(2, 5);
+		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+		pTemp->entity.curstate.renderamt = 255;
+	}
+}
+
+//=======================================
+//	R_Bubbles
+//	Create bubbles
+//=======================================
+
+void CTempEntities::R_Bubbles( vec_t* mins, vec_t* maxs, float height, int modelIndex, int count, float speed )
+{
+	TEMPENTITY* pTemp;
+	model_t* model;
+	int					i, frameCount;
+	float				angle;
+	vec3_t				origin;
+
+	if (!modelIndex)
+		return;
+
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!model)
+		return;
+
+	frameCount = ModelFrameCount(model);
+
+	for (i = 0; i < count; i++)
+	{
+		origin[0] = gEngfuncs.pfnRandomLong(mins[0], maxs[0]);
+		origin[1] = gEngfuncs.pfnRandomLong(mins[1], maxs[1]);
+		origin[2] = gEngfuncs.pfnRandomLong(mins[2], maxs[2]);
+		pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(origin, model);
+		if (!pTemp)
+			return;
+
+		pTemp->flags |= FTENT_SINEWAVE;
+
+		pTemp->x = origin[0];
+		pTemp->y = origin[1];
+
+		angle = gEngfuncs.pfnRandomLong(-3, 3);
+
+		pTemp->entity.baseline.origin[0] = cos(angle) * speed;
+		pTemp->entity.baseline.origin[1] = sin(angle) * speed;
+		pTemp->entity.baseline.origin[2] = gEngfuncs.pfnRandomLong(80, 140);
+		pTemp->die = gEngfuncs.GetClientTime() + ((height - (origin[2] - mins[2])) / pTemp->entity.baseline.origin[2]) - 0.1;
+		pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+
+		// Set sprite scale
+		pTemp->entity.curstate.scale = 1.0 / gEngfuncs.pfnRandomFloat(2, 5);
+		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+		pTemp->entity.curstate.renderamt = 255;
+	}
+}
+
+//=======================================
+//	R_BubbleTrail
+//	Create bubble trail
+//=======================================
+
+void CTempEntities::R_BubbleTrail( vec_t* start, vec_t* end, float height, int modelIndex, int count, float speed )
+{
+	TEMPENTITY* pTemp;
+	model_t* model;
+	int					i, frameCount;
+	float				dist, angle, zspeed;
+	vec3_t				origin;
+
+	if (!modelIndex)
+		return;
+
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!model)
+		return;
+
+	frameCount = ModelFrameCount(model);
+
+	for (i = 0; i < count; i++)
+	{
+		dist = gEngfuncs.pfnRandomFloat(0, 1.0);
+		origin[0] = start[0] + dist * (end[0] - start[0]);
+		origin[1] = start[1] + dist * (end[1] - start[1]);
+		origin[2] = start[2] + dist * (end[2] - start[2]);
+		pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(origin, model);
+		if (!pTemp)
+			return;
+
+		pTemp->flags |= FTENT_SINEWAVE;
+
+		pTemp->x = origin[0];
+		pTemp->y = origin[1];
+		angle = gEngfuncs.pfnRandomLong(-3, 3);
+
+		zspeed = gEngfuncs.pfnRandomLong(80, 140);
+		pTemp->entity.baseline.origin[0] = speed * cos(angle);
+		pTemp->entity.baseline.origin[1] = speed * sin(angle);
+		pTemp->entity.baseline.origin[2] = zspeed;
+		pTemp->die = gEngfuncs.GetClientTime() + ((height - (origin[2] - start[2])) / zspeed) - 0.1;
+		pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+
+		// Set sprite scale
+		pTemp->entity.curstate.scale = 1.0 / gEngfuncs.pfnRandomFloat(2, 5);
+		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+		pTemp->entity.curstate.renderamt = 255;
+	}
+}
+
+//=======================================
+//	R_Sprite_Trail
+//	Line of moving glow sprites with gravity, fadeout, and collisions
+//=======================================
+
+void CTempEntities::R_Sprite_Trail( int type, vec_t* start, vec_t* end, int modelIndex, int count, float life, float size, float amplitude, int renderamt, float speed )
+{
+	TEMPENTITY* ptemp;
+	model_t* model;
+	int				i, frameCount;
+	vec3_t			delta, pos, dir;
+
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!model)
+		return;
+
+	frameCount = ModelFrameCount(model);
+
+	VectorSubtract(end, start, delta);
+	VectorCopy(delta, dir);
+	VectorNormalize(dir);
+
+	amplitude /= 256.0;
+
+	for (i = 0; i < count; i++)
+	{
+		// Be careful of divide by 0 when using 'count' here...
+		if (i == 0)
+		{
+			VectorMA(start, 0, delta, pos);
+		}
+		else
+		{
+			float scale = (float)i / ((float)count - 1.0);
+			VectorMA(start, scale, delta, pos);
+		}
+
+		ptemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, model);
+		if (!ptemp)
+			return;
+
+		ptemp->flags |= (FTENT_COLLIDEWORLD | FTENT_SPRCYCLE | FTENT_FADEOUT | FTENT_SLOWGRAVITY);
+
+		VectorScale(dir, speed, ptemp->entity.baseline.origin);
+
+		ptemp->entity.baseline.origin[0] += gEngfuncs.pfnRandomLong(-127, 128) * amplitude;
+		ptemp->entity.baseline.origin[1] += gEngfuncs.pfnRandomLong(-127, 128) * amplitude;
+		ptemp->entity.baseline.origin[2] += gEngfuncs.pfnRandomLong(-127, 128) * amplitude;
+
+		ptemp->entity.curstate.rendermode = kRenderGlow;
+		ptemp->entity.curstate.renderfx = kRenderFxNoDissipation;
+		ptemp->entity.curstate.renderamt = renderamt;
+		ptemp->entity.baseline.renderamt = renderamt;
+		ptemp->entity.curstate.scale = size;
+
+		ptemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+		ptemp->frameMax = frameCount;
+		ptemp->die = gEngfuncs.GetClientTime() + life + gEngfuncs.pfnRandomFloat(0, 4);
+
+		ptemp->entity.curstate.rendercolor.r = 255;
+		ptemp->entity.curstate.rendercolor.g = 255;
+		ptemp->entity.curstate.rendercolor.b = 255;
+	}
+}
+
+//=======================================
+//	R_TempSphereModel
+//	Spherical shower of models, picks from set
+//=======================================
+
+void CTempEntities::R_TempSphereModel( float* pos, float speed, float life, int count, int modelIndex )
+{
+	int					i, frameCount;
+	TEMPENTITY* pTemp;
+	model_t* model;
+
+	if (!modelIndex)
+		return;
+
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!model)
+		return;
+
+	frameCount = ModelFrameCount(model);
+
+	// Create temporary models
+	for (i = 0; i < count; i++)
+	{
+		pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, model);
+		if (!pTemp)
+			return;
+
+		pTemp->entity.curstate.body = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+
+		if (gEngfuncs.pfnRandomLong(0, 255) < 10)
+			pTemp->flags |= FTENT_SLOWGRAVITY;
+		else
+			pTemp->flags |= FTENT_GRAVITY;
+
+		if (gEngfuncs.pfnRandomLong(0, 255) < 220)
+		{
+			pTemp->flags |= FTENT_ROTATE;
+			pTemp->entity.baseline.angles[0] = gEngfuncs.pfnRandomFloat(-256, -255);
+			pTemp->entity.baseline.angles[1] = gEngfuncs.pfnRandomFloat(-256, -255);
+			pTemp->entity.baseline.angles[2] = gEngfuncs.pfnRandomFloat(-256, -255);
+		}
+
+		if (gEngfuncs.pfnRandomLong(0, 255) < 100)
+		{
+			pTemp->flags |= FTENT_SMOKETRAIL;
+		}
+
+		pTemp->flags |= FTENT_FLICKER | FTENT_COLLIDEWORLD;
+
+		pTemp->entity.curstate.effects = i & 0x1F;
+		pTemp->entity.curstate.rendermode = kRenderNormal;
+
+		pTemp->entity.baseline.origin[0] = gEngfuncs.pfnRandomFloat(-1, 1);
+		pTemp->entity.baseline.origin[1] = gEngfuncs.pfnRandomFloat(-1, 1);
+		pTemp->entity.baseline.origin[2] = gEngfuncs.pfnRandomFloat(-1, 1);
+
+		VectorNormalize(pTemp->entity.baseline.origin);
+		VectorScale(pTemp->entity.baseline.origin, speed, pTemp->entity.baseline.origin);
+
+		pTemp->die = gEngfuncs.GetClientTime() + life;
+	}
+}
+
+#define SHARD_VOLUME 12.0	// on shard ever n^3 units
+
+//=======================================
+//	R_BreakModel
+//	Create model shattering shards
+//=======================================
+
+void CTempEntities::R_BreakModel( float* pos, float* size, float* dir, float random, float life, int count, int modelIndex, char flags )
+{
+	int					i, frameCount;
+	TEMPENTITY* pTemp;
+	model_t* pModel;
+	char				type;
+
+	if (!modelIndex)
+		return;
+
+	type = flags & BREAK_TYPEMASK;
+
+	pModel = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!pModel)
+		return;
+
+	frameCount = ModelFrameCount(pModel);
+
+	if (count == 0)
+		// assume surface (not volume)
+		count = (size[0] * size[1] + size[1] * size[2] + size[2] * size[0]) / (3 * SHARD_VOLUME * SHARD_VOLUME);
+
+	for (i = 0; i < count; i++)
+	{
+		vec3_t vecSpot;
+
+		// fill up the box with stuff
+		
+		vecSpot[0] = pos[0] + gEngfuncs.pfnRandomFloat(-0.5, 0.5) * size[0];
+		vecSpot[1] = pos[1] + gEngfuncs.pfnRandomFloat(-0.5, 0.5) * size[1];
+		vecSpot[2] = pos[2] + gEngfuncs.pfnRandomFloat(-0.5, 0.5) * size[2];
+
+		pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(vecSpot, pModel);
+		if (!pTemp)
+			break;
+
+		// keep track of break_type, so we know how to play sound on collision
+		pTemp->hitSound = type;
+
+		if (pModel->type == mod_sprite)
+			pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+		else if (pModel->type == mod_studio)
+			pTemp->entity.curstate.body = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+
+		pTemp->flags |= FTENT_COLLIDEWORLD | FTENT_FADEOUT | FTENT_SLOWGRAVITY;
+
+		if (gEngfuncs.pfnRandomLong(0, 255) < 200)
+		{
+			pTemp->flags |= FTENT_ROTATE;
+			pTemp->entity.baseline.angles[0] = gEngfuncs.pfnRandomFloat(-256, 255);
+			pTemp->entity.baseline.angles[1] = gEngfuncs.pfnRandomFloat(-256, 255);
+			pTemp->entity.baseline.angles[2] = gEngfuncs.pfnRandomFloat(-256, 255);
+		}
+
+		if ((gEngfuncs.pfnRandomLong(0, 255) < 100) && (flags & BREAK_SMOKE))
+			pTemp->flags |= FTENT_SMOKETRAIL;
+
+		if ((type == BREAK_GLASS) || (flags & BREAK_TRANS))
+		{
+			pTemp->entity.curstate.rendermode = kRenderTransTexture;
+			pTemp->entity.curstate.renderamt = 128;
+			pTemp->entity.baseline.renderamt = 128;
+		}
+		else
+		{
+			pTemp->entity.curstate.rendermode = kRenderNormal;
+			pTemp->entity.baseline.renderamt = 255;		// Set this for fadeout
+		}
+
+		pTemp->entity.baseline.origin[0] = dir[0] + gEngfuncs.pfnRandomFloat(-random, random);
+		pTemp->entity.baseline.origin[1] = dir[1] + gEngfuncs.pfnRandomFloat(-random, random);
+		pTemp->entity.baseline.origin[2] = dir[2] + gEngfuncs.pfnRandomFloat(0, random);
+
+		pTemp->die = gEngfuncs.GetClientTime() + life + gEngfuncs.pfnRandomFloat(0, 1);	// Add an extra 0-1 secs of life
+	}
+}
+
+//=======================================
+//	R_TempSprite
+//	Create sprite TE
+//=======================================
+
+TEMPENTITY* CTempEntities::R_TempSprite( float* pos, float* dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags )
+{
+	TEMPENTITY* pTemp;
+	model_t* model;
+	int					frameCount;
+
+	if (!modelIndex)
+		return NULL;
+
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!model)
+	{
+		gEngfuncs.Con_Printf("No model %d!\n", modelIndex);
+		return NULL;
+	}
+
+	frameCount = ModelFrameCount(model);
+
+	pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, model);
+	if (!pTemp)
+		return NULL;
+	gEngfuncs.Con_Printf("%d\n", frameCount);
+	pTemp->frameMax = frameCount;
+	pTemp->entity.curstate.framerate = 10;
+	pTemp->entity.curstate.rendermode = rendermode;
+	pTemp->entity.curstate.renderfx = renderfx;
+	pTemp->entity.curstate.scale = scale;
+	pTemp->entity.baseline.renderamt = a * 255;
+	pTemp->entity.curstate.rendercolor.r = 255;
+	pTemp->entity.curstate.rendercolor.g = 255;
+	pTemp->entity.curstate.rendercolor.b = 255;
+	pTemp->entity.curstate.renderamt = a * 255;
+
+	pTemp->flags |= flags;
+
+	VectorCopy(dir, pTemp->entity.baseline.origin);
+	VectorCopy(pos, pTemp->entity.origin);
+	if (life)
+		pTemp->die = gEngfuncs.GetClientTime() + life;
+	else
+		pTemp->die = gEngfuncs.GetClientTime() + (frameCount * 0.1) + 1;
+
+	pTemp->entity.curstate.frame = 0;
+	return pTemp;
+}
+
+//=======================================
+//	R_Sprite_Spray
+//	Spray sprite
+//=======================================
+
+void CTempEntities::R_Sprite_Spray( vec_t* pos, vec_t* dir, int modelIndex, int count, int speed, int iRand )
+{
+	TEMPENTITY* pTemp;
+	model_t* pModel;
+	float				noise;
+	float				znoise;
+	int					frameCount;
+	int					i;
+
+	noise = (float)iRand / 100;
+
+	// more vertical displacement
+	znoise = noise * 1.5;
+
+	if (znoise > 1)
+	{
+		znoise = 1;
+	}
+
+	pModel = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!pModel)
+	{
+		gEngfuncs.Con_Printf("No model %d!\n", modelIndex);
+		return;
+	}
+
+	frameCount = ModelFrameCount(pModel) - 1;
+
+	for (i = 0; i < count; i++)
+	{
+		pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, pModel);
+		if (!pTemp)
+			return;
+
+		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+		pTemp->entity.curstate.renderamt = 255;
+		pTemp->entity.baseline.renderamt = 255;
+		pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
+		pTemp->entity.curstate.scale = 0.5;
+		pTemp->flags |= FTENT_FADEOUT | FTENT_SLOWGRAVITY;
+		pTemp->fadeSpeed = 2.0;
+
+		// make the spittle fly the direction indicated, but mix in some noise.
+		pTemp->entity.baseline.origin[0] = dir[0] + gEngfuncs.pfnRandomFloat(-noise, noise);
+		pTemp->entity.baseline.origin[1] = dir[1] + gEngfuncs.pfnRandomFloat(-noise, noise);
+		pTemp->entity.baseline.origin[2] = dir[2] + gEngfuncs.pfnRandomFloat(0, znoise);
+		VectorScale(pTemp->entity.baseline.origin, gEngfuncs.pfnRandomFloat((speed * 0.8), (speed * 1.2)), pTemp->entity.baseline.origin);
+
+		VectorCopy(pos, pTemp->entity.origin);
+
+		pTemp->die = gEngfuncs.GetClientTime() + 0.35;
+
+		pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, frameCount);
+	}
+}
+
+//=======================================
+//	R_SparkEffect
+//=======================================
+
+void CTempEntities::R_SparkEffect( float* pos, int count, int velocityMin, int velocityMax )
+{
+	gEngfuncs.pEfxAPI->R_SparkStreaks(pos, count, velocityMin, velocityMax);
+	R_RicochetSprite(pos, cl_sprite_ricochet, 0.1, gEngfuncs.pfnRandomFloat(0.5, 1.0));
+}
+
+//=======================================
+//	R_FunnelSprite
+//=======================================
+
+void CTempEntities::R_FunnelSprite( float* org, int modelIndex, int reverse )
+{
+	TEMPENTITY* pTemp;
+	int				i, j;
+	float			flDist, vel;
+	vec3_t			dir, dest;
+	model_t* model;
+	int				frameCount;
+
+	if (!modelIndex)
+	{
+		gEngfuncs.Con_Printf("No modelindex for funnel!!\n");
+		return;
+	}
+
+	model = IEngineStudio.GetModelByIndex(modelIndex);
+	if (!model)
+	{
+		gEngfuncs.Con_Printf("No model %d!\n", modelIndex);
+		return;
+	}
+
+	frameCount = ModelFrameCount(model);
+
+	for (i = -256; i < 256; i += 32)
+	{
+		for (j = -256; j < 256; j += 32)
+		{
+			pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(org, model);
+			if (!pTemp)
+				return;
+
+			if (reverse)
+			{
+				VectorCopy(org, pTemp->entity.origin);
+
+				dest[0] = org[0] + i;
+				dest[1] = org[1] + j;
+				dest[2] = org[2] + gEngfuncs.pfnRandomFloat(100, 800);
+
+				// send particle heading to dest at a random speed
+				VectorSubtract(dest, pTemp->entity.origin, dir);
+
+				vel = dest[2] / 8;// velocity based on how far particle has to travel away from org
+			}
+			else
+			{
+				pTemp->entity.origin[0] = org[0] + i;
+				pTemp->entity.origin[1] = org[1] + j;
+				pTemp->entity.origin[2] = org[2] + gEngfuncs.pfnRandomFloat(100, 800);
+
+				// send particle heading to org at a random speed
+				VectorSubtract(org, pTemp->entity.origin, dir);
+
+				vel = pTemp->entity.origin[2] / 8;// velocity based on how far particle starts from org
+			}
+
+			pTemp->entity.curstate.framerate = 10;
+			pTemp->entity.curstate.rendermode = kRenderGlow;
+			pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
+			pTemp->entity.curstate.renderamt = 200;
+			pTemp->entity.baseline.renderamt = 200;
+
+			pTemp->frameMax = frameCount;
+			pTemp->entity.curstate.scale = gEngfuncs.pfnRandomFloat(0.1f, 0.4f);
+			pTemp->flags = FTENT_ROTATE | FTENT_FADEOUT;
+
+			flDist = VectorNormalize(dir);	// save the distance
+
+			if (vel < 64)
+			{
+				vel = 64;
+			}
+
+			vel += gEngfuncs.pfnRandomFloat(64, 128);
+			VectorScale(dir, vel, pTemp->entity.baseline.origin);
+
+			pTemp->fadeSpeed = 2.0;
+			pTemp->die = gEngfuncs.GetClientTime() + (flDist / vel) - 0.5;
+		}
+	}
+}
+
+//=======================================
+//	R_RicochetSprite
+//	Create ricochet sprite
+//=======================================
+
+void CTempEntities::R_RicochetSprite( float* pos, model_t* pmodel, float duration, float scale )
+{
+	TEMPENTITY* pTemp;
+
+	pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, pmodel);
+	if (!pTemp)
+		return;
+
+	pTemp->entity.curstate.rendermode = kRenderGlow;
+	pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
+	pTemp->entity.curstate.renderamt = 200;
+	pTemp->entity.baseline.renderamt = 200;
+	pTemp->entity.curstate.scale = scale;
+	pTemp->flags = FTENT_FADEOUT;
+
+	VectorClear(pTemp->entity.baseline.origin);
+
+	VectorCopy(pos, pTemp->entity.origin);
+
+	pTemp->fadeSpeed = 8;
+	pTemp->die = gEngfuncs.GetClientTime();
+
+	pTemp->entity.curstate.frame = 0;
+	pTemp->entity.angles[ROLL] = (45 * gEngfuncs.pfnRandomLong(0, 7));
+}
+
+//=======================================
+//	R_BloodSprite
+//	Create blood sprite
+//=======================================
+
+void CTempEntities::R_BloodSprite( vec_t* org, int colorindex, int modelIndex, int modelIndex2, float size )
+{
+	int				i, splatter;
+	TEMPENTITY* pTemp;
+	model_t* model;
+	model_t* model2;
+	int				frameCount, frameCount2;
+	unsigned int	impactindex;
+	unsigned int	spatterindex;
+	color24			impactcolor;
+	color24			splattercolor;
+
+	impactindex = 4 * (colorindex + gEngfuncs.pfnRandomLong(1, 3));
+	spatterindex = 4 * (colorindex + gEngfuncs.pfnRandomLong(1, 3)) + 4;
+
+	impactcolor.r = host_basepal[impactindex + 2];
+	impactcolor.g = host_basepal[impactindex + 1];
+	impactcolor.b = host_basepal[impactindex + 0];
+
+	splattercolor.r = host_basepal[spatterindex + 2];
+	splattercolor.g = host_basepal[spatterindex + 1];
+	splattercolor.b = host_basepal[spatterindex + 0];
+
+	//Validate the model first
+	if (modelIndex2 && (model2 = IEngineStudio.GetModelByIndex(modelIndex2)))
+	{
+		frameCount2 = ModelFrameCount(model2);
+
+		// Random amount of drips
+		splatter = size + gEngfuncs.pfnRandomLong(1, 8) + gEngfuncs.pfnRandomLong(1, 8);
+
+		for (i = 0; i < splatter; i++)
+		{
+			// Make some blood drips
+			if (pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(org, model2))
+			{
+				pTemp->entity.curstate.rendermode = kRenderNormal;
+				pTemp->entity.curstate.renderfx = kRenderFxNone;
+				pTemp->entity.curstate.scale = gEngfuncs.pfnRandomFloat(size / 15, size / 25);
+				pTemp->flags = FTENT_ROTATE | FTENT_SLOWGRAVITY | FTENT_COLLIDEWORLD;
+
+				pTemp->entity.curstate.rendercolor = splattercolor;
+				pTemp->entity.baseline.renderamt = 250;
+				pTemp->entity.curstate.renderamt = 250;
+
+				pTemp->entity.baseline.origin[0] = gEngfuncs.pfnRandomFloat(-96, 95);
+				pTemp->entity.baseline.origin[1] = gEngfuncs.pfnRandomFloat(-96, 95);
+				pTemp->entity.baseline.origin[2] = gEngfuncs.pfnRandomFloat(-32, 95);
+
+				pTemp->entity.baseline.angles[0] = gEngfuncs.pfnRandomFloat(-256, -255);
+				pTemp->entity.baseline.angles[1] = gEngfuncs.pfnRandomFloat(-256, -255);
+				pTemp->entity.baseline.angles[2] = gEngfuncs.pfnRandomFloat(-256, -255);
+
+				pTemp->entity.curstate.framerate = 0;
+				pTemp->die = gEngfuncs.GetClientTime() + gEngfuncs.pfnRandomFloat(1, 2);
+
+				pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(1, frameCount2 - 1);
+				if (pTemp->entity.curstate.frame > 8)
+					pTemp->entity.curstate.frame = frameCount2 - 1;
+
+				pTemp->entity.angles[ROLL] = gEngfuncs.pfnRandomLong(0, 360);
+			}
+		}
+	}
+
+	// Impact particle
+	if (modelIndex && (model = IEngineStudio.GetModelByIndex(modelIndex)))
+	{
+		frameCount = ModelFrameCount(model);
+
+		//Large, single blood sprite is a high-priority tent
+		if (pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(org, model))
+		{
+			pTemp->entity.curstate.rendermode = kRenderNormal;
+			pTemp->entity.curstate.renderfx = kRenderFxNone;
+			pTemp->entity.curstate.scale = gEngfuncs.pfnRandomFloat(size / 25, size / 35);
+			pTemp->flags = FTENT_SPRANIMATE;
+
+			pTemp->entity.curstate.rendercolor = impactcolor;
+			pTemp->entity.baseline.renderamt = 250;
+			pTemp->entity.curstate.renderamt = 250;
+
+			VectorClear(pTemp->entity.baseline.origin);
+
+			pTemp->entity.curstate.framerate = frameCount * 4; // Finish in 0.250 seconds
+			pTemp->die = gEngfuncs.GetClientTime() + (frameCount / pTemp->entity.curstate.framerate); // Play the whole thing Once
+
+			pTemp->entity.curstate.frame = 0;
+			pTemp->frameMax = frameCount;
+			pTemp->entity.angles[ROLL] = gEngfuncs.pfnRandomLong(0, 360);
+		}
+	}
+}
+
+//=======================================
+//	R_DefaultSprite
+//	Create default sprite TE
+//=======================================
+
+TEMPENTITY* CTempEntities::R_DefaultSprite( float* pos, int spriteIndex, float framerate )
+{
+	TEMPENTITY* pTemp;
+	int				frameCount;
+	model_t* pSprite;
+
+	// don't spawn while paused
+	//if (gEngfuncs.GetClientTime() == cl.oldtime)
+	//	return NULL;
+
+	pSprite = IEngineStudio.GetModelByIndex(spriteIndex);
+
+	if (!spriteIndex || !pSprite || pSprite->type != mod_sprite)
+	{
+		gEngfuncs.Con_DPrintf("No Sprite %d!\n", spriteIndex);
+		return NULL;
+	}
+
+	frameCount = ModelFrameCount(pSprite);
+
+	pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, pSprite);
+	if (!pTemp)
+		return NULL;
+
+	pTemp->entity.curstate.scale = 1.0;
+	pTemp->frameMax = frameCount;
+	pTemp->flags |= FTENT_SPRANIMATE;
+	if (framerate == 0)
+		framerate = 10;
+
+	VectorCopy(pos, pTemp->entity.origin);
+
+	pTemp->entity.curstate.framerate = framerate;
+	pTemp->entity.curstate.frame = 0;
+	pTemp->die = gEngfuncs.GetClientTime() + (float)frameCount / framerate;
+	
+	return pTemp;
+}
+
+//=======================================
+//	R_Sprite_Smoke
+//	Create sprite smoke
+//=======================================
+
+void CTempEntities::R_Sprite_Smoke( TEMPENTITY* pTemp, float scale )
+{
+	int iColor;
+
+	if (!pTemp)
+		return;
+
+	pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+	pTemp->entity.curstate.renderfx = kRenderFxNone;
+	pTemp->entity.curstate.renderamt = 255;
+	pTemp->entity.baseline.origin[2] = 30;
+	iColor = gEngfuncs.pfnRandomLong(20, 35);
+	pTemp->entity.curstate.rendercolor.r = iColor;
+	pTemp->entity.curstate.rendercolor.g = iColor;
+	pTemp->entity.curstate.rendercolor.b = iColor;
+	pTemp->entity.origin[2] += 20;
+	pTemp->entity.curstate.scale = scale;
+}
+
+//=======================================
+//	R_Sprite_Explode
+//	Create explosion sprite
+//=======================================
+
+void CTempEntities::R_Sprite_Explode( TEMPENTITY* pTemp, float scale, int flags )
+{
+	if (!pTemp)
+		return;
+
+	if ( flags & TE_EXPLFLAG_NOADDITIVE )
+	{
+		pTemp->entity.curstate.rendermode = kRenderTransAdd;
+		pTemp->entity.curstate.renderfx = kRenderFxNone;
+	}
+	else
+	{
+		pTemp->entity.curstate.rendermode = kRenderTransAdd;
+		pTemp->entity.curstate.renderamt = 180;
+	}
+
+	pTemp->entity.curstate.renderfx = kRenderFxNone;
+	pTemp->entity.curstate.rendercolor.r = 0;
+	pTemp->entity.curstate.rendercolor.g = 0;
+	pTemp->entity.curstate.rendercolor.b = 0;
+	pTemp->entity.curstate.scale = scale;
+	pTemp->entity.origin[2] += 10;
+	pTemp->entity.curstate.renderamt = 180;
+	pTemp->entity.baseline.origin[2] = 8.0;
+}
+
+//=======================================
+//	R_Sprite_WallPuff
+//	Create a wallpuff
+//=======================================
+
+void CTempEntities::R_Sprite_WallPuff( TEMPENTITY* pTemp, float scale )
+{
+	if (!pTemp)
+		return;
+
+	pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+	pTemp->entity.curstate.renderamt = 255;
+	pTemp->entity.curstate.rendercolor.r = 0;
+	pTemp->entity.curstate.rendercolor.g = 0;
+	pTemp->entity.curstate.rendercolor.b = 0;
+	pTemp->entity.curstate.renderfx = kRenderFxNone;
+	pTemp->entity.curstate.scale = scale;
+	pTemp->entity.curstate.frame = 0;
+	pTemp->entity.angles[ROLL] = gEngfuncs.pfnRandomLong(0, 359);
+	pTemp->die = gEngfuncs.GetClientTime() + 0.01;
+}
+
+//=======================================
+//	R_MuzzleFlash
+//	Play muzzle flash
+//=======================================
+
+void CTempEntities::R_MuzzleFlash( float* pos1, int type )
+{
+	// SERECKY FEB-24-26: for some reason i can't get this to work properly in s.w mode,
+	// so we'll have to fall back to the original method...
+	if ( !IEngineStudio.IsHardware() )
+	{
+		gEngfuncs.pEfxAPI->R_MuzzleFlash( pos1, type );
+		return;
+	}
+
+	TEMPENTITY* pTemp;
+	int index;
+	float scale;
+	int			frameCount;
+
+	index = (type % 10) % 3;
+	scale = (type / 10) * 0.1;
+	if (scale == 0)
+		scale = 0.5;
+
+	frameCount = ModelFrameCount(cl_sprite_muzzleflash[index]);
+
+	//gEngfuncs.Con_DPrintf("%d %f\n", index, scale);
+	pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos1, cl_sprite_muzzleflash[index]);
+	if (!pTemp)
+		return;	
+	pTemp->entity.curstate.rendermode = kRenderTransAdd;
+	pTemp->entity.curstate.renderamt = 255;
+	pTemp->entity.curstate.renderfx = kRenderFxNone;
+	pTemp->entity.curstate.rendercolor.r = 255;
+	pTemp->entity.curstate.rendercolor.g = 255;
+	pTemp->entity.curstate.rendercolor.b = 255;
+	VectorCopy(pos1, pTemp->entity.origin);
+	pTemp->die = gEngfuncs.GetClientTime() +0.01;
+	pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, frameCount - 1);
+	pTemp->frameMax = frameCount;
+	VectorCopy(vec3_origin, pTemp->entity.angles);
+
+	pTemp->entity.curstate.scale = scale;
+
+	if (index == 0)
+	{
+		// Rifle flash
+		pTemp->entity.angles[ROLL] = gEngfuncs.pfnRandomLong(0, 20);
+	}
+	else
+	{
+		pTemp->entity.angles[ROLL] = gEngfuncs.pfnRandomLong(0, 359);
+	}
+
+	gEngfuncs.CL_CreateVisibleEntity( ET_TEMPENTITY, &pTemp->entity );
+}
+
+
+//=======================================
 //	MsgFunc_ParseTEnt
 //	This whole function is a bit uhm.. bloated..
 //=======================================
 
-int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
+int CTempEntities::MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 {
 	char	c;
 	int		type;
@@ -913,44 +1963,51 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		if (scale != 0)
 		{
 			// sprite
-			gEngfuncs.pEfxAPI->R_Sprite_Explode(gEngfuncs.pEfxAPI->R_DefaultSprite(pos, modelindex, frameRate), scale, flags);
+			R_Sprite_Explode(R_DefaultSprite(pos, modelindex, frameRate), scale, flags);
 
-			R_FlickerParticles(pos);
+			if (!(flags & TE_EXPLFLAG_NOPARTICLES))
+				R_FlickerParticles(pos);
 
-			// big flash
-			dl = gEngfuncs.pEfxAPI->CL_AllocDlight(0);
-			VectorCopy(pos, dl->origin);
-			dl->radius = 200;
-			dl->color.r = 250;
-			dl->color.g = 250;
-			dl->color.b = 150;
-			dl->die = gEngfuncs.GetClientTime() + 0.01;
-			dl->decay = 800;
+			if (!(flags & TE_EXPLFLAG_NODLIGHTS))
+			{
+				// big flash
+				dl = gEngfuncs.pEfxAPI->CL_AllocDlight(0);
+				VectorCopy(pos, dl->origin);
+				dl->radius = 200;
+				dl->color.r = 250;
+				dl->color.g = 250;
+				dl->color.b = 150;
+				dl->die = gEngfuncs.GetClientTime() + 0.01;
+				dl->decay = 800;
 
 
-			// red glow
-			dl = gEngfuncs.pEfxAPI->CL_AllocDlight(0);
-			VectorCopy(pos, dl->origin);
-			dl->radius = 150;
-			dl->color.r = 255;
-			dl->color.g = 190;
-			dl->color.b = 40;
-			dl->die = gEngfuncs.GetClientTime() + 1.0;
-			dl->decay = 200;
+				// red glow
+				dl = gEngfuncs.pEfxAPI->CL_AllocDlight(0);
+				VectorCopy(pos, dl->origin);
+				dl->radius = 150;
+				dl->color.r = 255;
+				dl->color.g = 190;
+				dl->color.b = 40;
+				dl->die = gEngfuncs.GetClientTime() + 1.0;
+				dl->decay = 200;
+			}
 		}
 
 		// sound
-		switch (gEngfuncs.pfnRandomLong(0, 2))
+		if (!(flags & TE_EXPLFLAG_NOSOUND))
 		{
-		case 0:
-			S_StartDynamicSound(-1, CHAN_AUTO, "weapons/explode3.wav", pos, VOL_NORM, 0.3, 0, PITCH_NORM);
-			break;
-		case 1:
-			S_StartDynamicSound(-1, CHAN_AUTO, "weapons/explode4.wav", pos, VOL_NORM, 0.3, 0, PITCH_NORM);
-			break;
-		case 2:
-			S_StartDynamicSound(-1, CHAN_AUTO, "weapons/explode5.wav", pos, VOL_NORM, 0.3, 0, PITCH_NORM);
-			break;
+			switch (gEngfuncs.pfnRandomLong(0, 2))
+			{
+			case 0:
+				S_StartDynamicSound(-1, CHAN_AUTO, "weapons/explode3.wav", pos, VOL_NORM, 0.3, 0, PITCH_NORM);
+				break;
+			case 1:
+				S_StartDynamicSound(-1, CHAN_AUTO, "weapons/explode4.wav", pos, VOL_NORM, 0.3, 0, PITCH_NORM);
+				break;
+			case 2:
+				S_StartDynamicSound(-1, CHAN_AUTO, "weapons/explode5.wav", pos, VOL_NORM, 0.3, 0, PITCH_NORM);
+				break;
+			}
 		}
 		break;
 
@@ -969,7 +2026,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		modelindex = READ_SHORT();
 		scale = READ_BYTE() * 0.1;
 		frameRate = READ_BYTE();
-		gEngfuncs.pEfxAPI->R_Sprite_Smoke(gEngfuncs.pEfxAPI->R_DefaultSprite(pos, modelindex, frameRate), scale);
+		R_Sprite_Smoke(gEngfuncs.pEfxAPI->R_DefaultSprite(pos, modelindex, frameRate), scale);
 		break;
 
 	case TE_TRACER:
@@ -1005,7 +2062,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		pos[0] = READ_COORD();
 		pos[1] = READ_COORD();
 		pos[2] = READ_COORD();
-		gEngfuncs.pEfxAPI->R_SparkEffect(pos, 8, -200, 200);
+		R_SparkEffect(pos, 8, -200, 200);
 		break;
 
 	case TE_LAVASPLASH:
@@ -1090,7 +2147,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 			break;
 		}
 
-		if (r_decals->value)
+		if (m_pCvarDecals->value)
 		{
 			gEngfuncs.pEfxAPI->R_DecalShoot(gEngfuncs.pEfxAPI->Draw_DecalIndex(decalTextureIndex), entnumber, modelindex, pos, flags);
 		}
@@ -1107,7 +2164,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		radius = READ_BYTE();
 		count = READ_BYTE();
 		life = READ_BYTE() / 10.0;
-		gEngfuncs.pEfxAPI->R_Implosion(pos, radius, count, life);
+		R_Implosion(pos, radius, count, life);
 		break;
 	}
 	
@@ -1137,7 +2194,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		amplitude = READ_BYTE() * 10.0;
 		flSpeed = READ_BYTE() * 10.0;
 
-		gEngfuncs.pEfxAPI->R_Sprite_Trail(type, pos, endpos, modelindex, count, life, scale, amplitude, 255, flSpeed);
+		R_Sprite_Trail(type, pos, endpos, modelindex, count, life, scale, amplitude, 255, flSpeed);
 		break;
 	}
 
@@ -1148,7 +2205,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		modelindex = READ_SHORT();
 		scale = READ_BYTE() * 0.1;
 		a = READ_BYTE() / 255.0;
-		gEngfuncs.pEfxAPI->R_TempSprite(pos, vec3_origin, scale, modelindex, kRenderTransAdd, kRenderFxNone, a, 0, FTENT_SPRANIMATE);
+		R_TempSprite(pos, vec3_origin, scale, modelindex, kRenderTransAdd, kRenderFxNone, a, 0, FTENT_SPRANIMATE);
 		break;
 
 	case TE_BEAMSPRITE:
@@ -1164,7 +2221,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		modelindex2 = READ_SHORT();	// sprite modelindex
 
 		gEngfuncs.pEfxAPI->R_BeamPoints(pos, endpos, modelindex, 0.01, 0.4, 0, gEngfuncs.pfnRandomFloat(0.5, 0.655), 5, 0, 0, 1, 0, 0);
-		gEngfuncs.pEfxAPI->R_TempSprite(endpos, vec3_origin, 0.1, modelindex2, kRenderTransAdd, kRenderFxNone, 0.35, 0.01, 0);
+		R_TempSprite(endpos, vec3_origin, 0.1, modelindex2, kRenderTransAdd, kRenderFxNone, 0.35, 0.01, 0);
 		break;
 
 	case TE_BEAMTORUS:
@@ -1229,7 +2286,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		scale = READ_BYTE() * 0.1;
 		a = READ_BYTE() / 255.0;
 
-		gEngfuncs.pEfxAPI->R_TempSprite(pos, vec3_origin, scale, modelindex, kRenderGlow, kRenderFxNoDissipation, a, life, FTENT_FADEOUT);
+		R_TempSprite(pos, vec3_origin, scale, modelindex, kRenderGlow, kRenderFxNoDissipation, a, life, FTENT_FADEOUT);
 		break;
 
 	case TE_BEAMRING:
@@ -1271,7 +2328,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		count = READ_SHORT();
 		speed = READ_SHORT();
 		iRand = READ_SHORT();
-		gEngfuncs.pEfxAPI->R_StreakSplash(pos, dir, color, count, speed, -iRand, iRand);
+		R_StreakSplash(pos, dir, color, count, speed, -iRand, iRand);
 		break;
 
 	case TE_DLIGHT:
@@ -1311,6 +2368,18 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		dl->decay = flTime;
 		break;
 	}
+
+	case TE_TEXTMESSAGE:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_LINE:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_BOX:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
 
 	case TE_KILLBEAM:
 		entnumber = READ_SHORT();
@@ -1370,7 +2439,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		density = READ_BYTE();
 
 		if ((ent = gEngfuncs.GetEntityByIndex(entnumber)) != NULL)
-			gEngfuncs.pEfxAPI->R_FizzEffect(ent, modelindex, density);
+			R_FizzEffect(ent, modelindex, density);
 		break;
 	}
 
@@ -1405,7 +2474,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		count = READ_SHORT();
 		life = READ_BYTE() * 0.1;
 
-		gEngfuncs.pEfxAPI->R_TempSphereModel(pos, flSpeed, life, count, modelindex);
+		R_TempSphereModel(pos, flSpeed, life, count, modelindex);
 		break;
 		
 	case TE_BREAKMODEL:
@@ -1429,7 +2498,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		count = READ_BYTE();
 		life = READ_BYTE() * 0.1;
 		c = READ_BYTE();
-		gEngfuncs.pEfxAPI->R_BreakModel(pos, size, dir, frandom, life, count, modelindex, c);
+		R_BreakModel(pos, size, dir, frandom, life, count, modelindex, c);
 		break;
 	}
 
@@ -1445,9 +2514,8 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		entnumber = READ_SHORT();
 		decalTextureIndex = READ_BYTE();	
 
-		if ((model = gEngfuncs.CL_LoadModel("sprites/wallpuff.spr", &modelindex)) != NULL)
-			pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, model);
-		gEngfuncs.pEfxAPI->R_Sprite_WallPuff(pTemp, 0.3);
+		pTemp = gEngfuncs.pEfxAPI->CL_TempEntAlloc(pos, cl_sprite_shell);
+		R_Sprite_WallPuff(pTemp, 0.3);
 
 		iRand = gEngfuncs.pfnRandomLong(0, 0x7FFF);
 		if (iRand < 0x3FFF)
@@ -1478,7 +2546,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 			break;
 		}
 
-		if (r_decals->value)
+		if (m_pCvarDecals->value)
 		{
 			gEngfuncs.pEfxAPI->R_DecalShoot(gEngfuncs.pEfxAPI->Draw_DecalIndex(decalTextureIndex), entnumber, 0, pos, 0);
 		}
@@ -1496,7 +2564,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		count = READ_BYTE();
 		speed = READ_BYTE();
 		iRand = READ_BYTE();
-		gEngfuncs.pEfxAPI->R_Sprite_Spray(pos, dir, modelindex, count, speed * 2, iRand);
+		R_Sprite_Spray(pos, dir, modelindex, count, speed * 2, iRand);
 		break;
 
 	case TE_ARMOR_RICOCHET:
@@ -1505,8 +2573,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		pos[2] = READ_COORD();
 		scale = READ_BYTE() * 0.1;
 
-		if ((model = gEngfuncs.CL_LoadModel("sprites/richo1.spr", &modelindex)) != NULL)
-			gEngfuncs.pEfxAPI->R_RicochetSprite(pos, model, 0.1, scale);
+		R_RicochetSprite(pos, cl_sprite_ricochet, 0.1, scale);
 
 		switch (gEngfuncs.pfnRandomLong(0, 4))
 		{
@@ -1528,6 +2595,10 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		}
 		break;
 
+	case TE_PLAYERDECAL:
+		gEngfuncs.Con_Printf("USE SVC_TEMPENTITY VERSION INSTEAD!!!\n");
+		break;
+
 	case TE_BUBBLES:
 	{
 		float height;
@@ -1544,7 +2615,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		modelindex = READ_SHORT();
 		count = READ_BYTE();
 		flSpeed = READ_COORD();
-		gEngfuncs.pEfxAPI->R_Bubbles(pos, endpos, height, modelindex, count, flSpeed);
+		R_Bubbles(pos, endpos, height, modelindex, count, flSpeed);
 		break;
 	}
 
@@ -1564,7 +2635,7 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		modelindex = READ_SHORT();
 		count = READ_BYTE();
 		flSpeed = READ_COORD();
-		gEngfuncs.pEfxAPI->R_BubbleTrail(pos, endpos, height, modelindex, count, flSpeed);
+		R_BubbleTrail(pos, endpos, height, modelindex, count, flSpeed);
 		break;
 	}
 
@@ -1579,9 +2650,45 @@ int __MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		modelindex2 = READ_SHORT();
 		color = READ_BYTE();
 		fsize = READ_BYTE();
-		gEngfuncs.pEfxAPI->R_BloodSprite(pos, color, modelindex, modelindex2, fsize);
+		R_BloodSprite(pos, color, modelindex, modelindex2, fsize);
 		break;
 	}
+
+	case TE_PROJECTILE:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_SPRAY:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_PLAYERSPRITES:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_PARTICLEBURST:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_FIREFIELD:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_PLAYERATTACHMENT:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_KILLPLAYERATTACHMENTS:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_MULTIGUNSHOT:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
+
+	case TE_USERTRACER:
+		gEngfuncs.Con_Printf("TODO!!!\n");
+		break;
 
 	default:
 		gEngfuncs.Con_Printf("CL_ParseTEnt: bad type %d", type);

@@ -32,6 +32,7 @@
 #include "vgui_scorepanel.h"
 #include "particledan/particledan.h"
 #include "hlfont.h"
+#include "cl_hl_tent.h"
 
 // SERECKY JAN-21-26: hud scaling start
 extern model_s *gpSprite;
@@ -357,9 +358,8 @@ void CHud :: Init( void )
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 
 	m_Menu.Init();
-	
+	gTempEnt.Init();
 	ServersInit();
-	TempEnt_Init();
 
 	MsgFunc_ResetHUD(0, 0, NULL );
 }
@@ -384,6 +384,7 @@ CHud :: ~CHud()
 		m_pHudList = NULL;
 	}
 
+	gTempEnt.Shutdown();
 	ServersShutdown();
 }
 
@@ -509,6 +510,7 @@ void CHud :: VidInit( void )
 	m_StatusIcons.VidInit();
 	gParticleDan.VidInit();
 	gFont.VidInit();
+	gTempEnt.VidInit();
 
 	GetClientVoiceMgr()->VidInit();
 

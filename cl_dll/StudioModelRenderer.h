@@ -98,6 +98,8 @@ public:
 	// Process movement of player
 	virtual void StudioProcessGait ( entity_state_t *pplayer );
 
+	// Get number of body variations
+	virtual int StudioBodyVariations ( model_t* model );
 public:
 
 	// Client clock

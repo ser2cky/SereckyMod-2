@@ -2,9 +2,9 @@
 //=======================================
 //	particle_dan3.cpp
 // 
-//	Purpose: Latest version of my "ParticleDan"
-//	system. Particles can now be read from .pdan
-//	scripts
+//	Purpose: Particle System for Half-Life 1 that
+//	allows you to create particles from either inside
+//	the client, or from scripts.
 //
 //	History:
 //	FEB-21-26: Started. Redid all the emitter and
@@ -12,7 +12,11 @@
 //	the flags field in favour of typedef enums for
 //	specific behaviours that are easier to deal with
 //	in scripts.
-//	FEB-22-26: 
+//	FEB-27-26: Reworked particle animation code a bit..
+//	now it's all controlled with think enums... also made
+//	a proper active and free particle pool so every frame
+//	we can just iterate on less particles. also started proper
+//	work on script parsing.
 //
 //=======================================
 
@@ -27,51 +31,74 @@
 
 extern engine_studio_api_t IEngineStudio;
 CParticleDan	gParticleDan;
+extern vec3_t v_angles;
+extern vec3_t v_lastAngles;
 
 //===============================
-//	Color24ToVector
+//	RGBToColor4f
 //===============================
 
-vec3_t Color24ToVector( color24 color )
+vec3_t CParticleDan::RGBToColor4f( float r, float g, float b )
 {
 	vec3_t vecColor;
 
-	vecColor[0] = color.r * ( 1.0f / 255.0f );
-	vecColor[1] = color.g * ( 1.0f / 255.0f );
-	vecColor[2] = color.b * ( 1.0f / 255.0f );
+	vecColor[0] = r * ( 1.0f / 255.0f );
+	vecColor[1] = g * ( 1.0f / 255.0f );
+	vecColor[2] = b * ( 1.0f / 255.0f );
 
 	return vecColor;
 }
 
 //===============================
-//	IsAnimationDoneYet
+//	SetColor
 //===============================
 
-int IsAnimationDoneYet( float current, float max, float direction )
+void CParticleDan::SetColor( ParticleDan* p, vec3_t start, vec3_t end, vec3_t step, anim_think_t mode )
 {
-	if ( ( current >= max ) && ( direction == INCREASING ) )
-		return 1;
-	if ( ( current <= max ) && ( direction == DECREASING ) )
-		return 1;
-	return 0;
+	p->color = start;
+	p->color_start = start;
+	p->color_end = end;
+	p->color_step = step;
+	p->color_think = mode;
 }
 
 //===============================
-//	GetAnimDirection
+//	SetScale
 //===============================
 
-void GetAnimDirection( float current, float max, int* dir ) 
-{ 
-	if ( current >= max )
-	{
-		*dir = DECREASING;
-		gEngfuncs.Con_Printf("increasing\n");
-	}
-	if ( current <= max )
-	{
-		*dir = INCREASING;
-		gEngfuncs.Con_Printf("decreasing\n");
-	}
+void CParticleDan::SetScale( ParticleDan* p, Vector2D start, Vector2D end, Vector2D step, anim_think_t mode )
+{
+	p->scale = start;
+	p->scale_start = start;
+	p->scale_end = end;
+	p->scale_step = step;
+	p->scale_think = mode;
+}
+
+//===============================
+//	SetFade
+//===============================
+
+void CParticleDan::SetFade( ParticleDan* p, float start, float end, float step, anim_think_t mode )
+{
+	p->alpha = start;
+	p->alpha_start = start;
+	p->alpha_end = end;
+	p->alpha_step = step;
+	p->alpha_think = mode;
+}
+
+//===============================
+//	SetAnimate
+//===============================
+
+void CParticleDan::SetAnimate( ParticleDan* p, int start, int end, int framerate, anim_think_t mode )
+{
+	p->frame = start;
+	p->frame_start = start;
+	p->frame_end = end;
+	p->framerate = framerate;
+	p->anim_think = mode;
 }
 
 //===============================
@@ -91,205 +118,422 @@ int CParticleDan::Init( void )
 
 int CParticleDan::VidInit( void )
 {
-	m_iActiveParticles = 0;
-
 	memset( m_Particles, 0, sizeof(m_Particles) );
 
-	for (int i = 0; i < MAX_PARTICLES; i++)
-		m_Particles[i].alive = 0;
+	m_FreeParticles = &m_Particles[ 0 ];
+	m_ActiveParticles = NULL;
 
+	for (int i = 0; i < MAX_PARTICLES; i++)
+		m_Particles[i].next = &m_Particles[ i + 1 ];
+	m_Particles[ MAX_PARTICLES - 1 ].next = NULL;
+
+	m_iActiveParticles = 0;
 	return 1;
 }
 
-//===============================
+//=======================================
 //	MsgFunc_AddEmitter
-//===============================
+//=======================================
 
-int CParticleDan::MsgFunc_AddEmitter( const char *pszName,  int iSize, void *pbuf )
+int CParticleDan::MsgFunc_AddEmitter( const char *pszName, int iSize, void *pbuf )
 {
+	char *szScript, *szScriptName;
+	vec3_t vecOrg;
+	int iEntIndex;
+
 	BEGIN_READ( pbuf, iSize );
 
+	vecOrg[0] = READ_COORD();
+	vecOrg[1] = READ_COORD();
+	vecOrg[2] = READ_COORD();
+	iEntIndex = READ_SHORT();
+	szScriptName = READ_STRING();
+
+	if ( ( szScript = ( char* )gEngfuncs.COM_LoadFile( szScriptName, 0, NULL ) ) != NULL )
+		ParseScript( szScript );
+	else
+		gEngfuncs.Con_Printf( "ParticleDan: Cannot load \"%s\"!\n", szScriptName );
+
 	return 1;
 }
 
-//===============================
-//	GetParticlePointer
-//===============================
+//=======================================
+//	ParseScript
+//	Read .PDAN scripts to create both emitters and particles.
+//=======================================
 
-partdan_t *CParticleDan::GetParticlePointer( void )
+void CParticleDan::ParseScript( const char* pszScript )
 {
-	int i;
+	//TODO
 
-	for ( i = 0; i < MAX_PARTICLES; i++ )
+	gEngfuncs.COM_FreeFile( ( void* )pszScript );
+}
+
+//=======================================
+//	GetParticlePointer
+//	return particle pointers for people to use them in good things.
+//=======================================
+
+ParticleDan *CParticleDan::GetParticlePointer( void )
+{
+	ParticleDan* p;
+
+	if ( !m_FreeParticles )
 	{
-		if ( !m_Particles[i].alive )
-		{
-			memset(&m_Particles[i], 0, sizeof(m_Particles[i]));
-			m_iActiveParticles++;
-			m_Particles[i].alive = 1;
-			return &m_Particles[i];
-		}
-		
+		gEngfuncs.Con_Printf("ParticleDan: Unable to grab a particle pointer! Particle limit is 8192!");
+		return NULL;
 	}
 
-	gEngfuncs.Con_Printf("ParticleDan: Unable to grab a particle pointer! Particle limit is 8192!");
+	p = m_FreeParticles;
+	m_FreeParticles = p->next;
+	memset( p, 0, sizeof(ParticleDan) );
+	p->next = m_ActiveParticles;
+	m_ActiveParticles = p;
 
-	return NULL;
+	p->ltime = 1.0f;
+	m_iActiveParticles++;
+	return p;
 }
 
-//===============================
-//	ParseScript
-//===============================
-
-void CParticleDan::ParseScript( void )
-{
-
-}
-
-//===============================
+//=======================================
 //	ManageParticles
-//===============================
+//	Manage all particles we have right now, and run their
+//	respective thinking and drawing functions. memory code's
+//	knicked from quake2. it's solid code that's ripe for the
+//	picking...
+//=======================================
 
 void CParticleDan::ManageParticles( void )
 {
-	int i;
+	ParticleDan *p, *next, *tail, *active;
 
-	for ( i = 0; i < MAX_PARTICLES; i++ )
+	active = NULL;
+	tail = NULL;
+
+	for ( p = m_ActiveParticles; p; p = next )
 	{
-		if ( m_Particles[i].alive )
-		{
-			ParticleThink( &m_Particles[i] );
-			ParticleDraw( &m_Particles[i] );
+		next = p->next;
 
-			if ( m_Particles[i].ltime <= 0.0f )
-			{
-				m_Particles[i].alive = 0;
-				m_iActiveParticles--;
-				memset( &m_Particles[i], 0, sizeof(m_Particles[i]) );
-			}
+		if ( p->ltime <= 0.0f )
+		{
+			p->next = m_FreeParticles;
+			m_FreeParticles = p;
+			m_iActiveParticles--;
+			continue;
 		}
+
+		p->next = NULL;
+
+		if ( !tail )
+		{
+			active = tail = p;
+		}
+		else
+		{
+			tail->next = p;
+			tail = p;
+		}
+
+		ParticleThink( p );
+		ParticleDraw( p );
 	}
+
+	m_ActiveParticles = active;
 
 	if (m_pCvarTestParticles->value)
 		CreateTestParticles();
 }
 
-//===============================
+//=======================================
 //	ParticleThink
-//===============================
+//	this is where particles do their little funny thinking code
+//=======================================
 
-void CParticleDan::ParticleThink( partdan_t* p )
+void CParticleDan::ParticleThink( ParticleDan* p )
 {
-	// Move our particle around.
+	int i;
 
 	VectorCopy( p->org, p->old_org );
+	p->ltime -= gHUD.m_flTimeDelta;
 
 	VectorMA( p->vel, gHUD.m_flTimeDelta, p->accel, p->vel );
 	VectorMA( p->org, gHUD.m_flTimeDelta, p->vel, p->org );
 	p->ang += p->angvel * gHUD.m_flTimeDelta;
 
-	// Get animation directions if we haven't already.
-	if ( !p->anim_dir ) GetAnimDirection( p->frame, p->frame_max, &p->anim_dir );
-	if ( !p->scale_dir ) GetAnimDirection( p->scale.x, p->scale_max.x, &p->scale_dir);
-	if ( !p->alpha_dir ) GetAnimDirection( p->alpha, p->alpha_max, &p->alpha_dir);
-
-	// Scaling
-	if ( p->scale_think != DONT_SCALE )
-	{
-		p->scale.x += p->scale_step.x * gHUD.m_flTimeDelta;
-		p->scale.y += p->scale_step.y * gHUD.m_flTimeDelta;
-
-		if ( IsAnimationDoneYet( p->scale.x, p->scale_max.x, p->anim_dir ) )
-			p->anim_finished = 1;
-
-		switch ( p->scale_think )
-		{
-			case SCALE_ONCE:
-			{
-				if ( p->anim_finished )
-					p->scale_step = { 0, 0 };
-				break;
-			}
-			case SCALE_DIE:
-			{
-				if ( p->anim_finished )
-					p->ltime = 0.0f;
-			}
-		}
-	}
-
 	// Animating
-	if ( p->anim_think != DONT_ANIMATE )
+	if ( p->anim_think != DO_NOTHING )
 	{
-		if ( p->nextanim < gHUD.m_flTime )
+		if ( p->nextanim <= 0.0f )
 		{
-			p->frame += 1 * p->anim_dir;
-			p->nextanim = gHUD.m_flTime + ( 1.0f / (float)p->fps );
+			p->frame += 1;
+			p->nextanim = 1.0f / p->framerate;
 		}
 
+		p->nextanim -= gHUD.m_flTimeDelta;
+		
 		switch ( p->anim_think )
 		{
-			case ANIMATE_ONCE:
-			{
-				if ( p->frame > p->frame_max )
-					p->frame = p->frame_max;
-				break;
-			}
 			case ANIMATE_DIE:
 			{
-				if ( p->frame > p->frame_max )
+				if ( p->frame > p->frame_end )
 					p->ltime = 0.0f;
+				break;
+			}
+			case ANIMATE_ONCE:
+			{
+				if ( p->frame > p->frame_end )
+					p->nextanim = 10.0f;
 				break;
 			}
 			case ANIMATE_LOOP:
 			{
-				if ( p->frame > p->frame_max )
-					p->frame = 0;
+				if ( p->frame > p->frame_end )
+					p->frame = p->frame_start;
+				break;
+			}
+			default:
+			{
 				break;
 			}
 		}
 	}
 
-	// Fading
-	if ( p->alpha_think != DONT_FADE )
+	// Fading in & out
+	if ( p->alpha_think != DO_NOTHING )
 	{
-		p->alpha += p->alpha_step * gHUD.m_flTimeDelta;
-
-		if ( IsAnimationDoneYet( p->alpha, p->alpha_max, p->alpha_dir ) )
-		{
-			p->alpha_finished = 1;
-			gEngfuncs.Con_Printf("ParticleDan: Finished fading\n");
-		}
-
+		p->alpha += gHUD.m_flTimeDelta * p->alpha_step;
+		
 		switch ( p->alpha_think )
 		{
-			case FADE_DIE:
+			case ANIMATE_DIE:
 			{
-				if ( p->alpha_finished )
+				// Fading out
+				if ( ( p->alpha_start > p->alpha_end ) && ( p->alpha < p->alpha_end ) )
+					p->ltime = 0.0f;
+				// Fading in.
+				if ( ( p->alpha_start < p->alpha_end ) && ( p->alpha > p->alpha_end ) )
 					p->ltime = 0.0f;
 				break;
 			}
-			case FADE_LOOP:
+			case ANIMATE_ONCE:
 			{
-				if ( p->alpha_finished )
-					p->alpha = 0.0f;
+				// Fading out
+				if ( ( p->alpha_start > p->alpha_end ) && ( p->alpha < p->alpha_end ) )
+					p->alpha_step = 0.0f;
+				// Fading in.
+				if ( ( p->alpha_start < p->alpha_end ) && ( p->alpha > p->alpha_end ) )
+					p->alpha_step = 0.0f;
 				break;
 			}
-			case FADE_IN_OUT:
-			case FADE_IN_OUT_DIE:
+			case ANIMATE_LOOP:
 			{
-				if ( p->alpha_finished )
+				// Fading out
+				if ( ( p->alpha_start > p->alpha_end ) && ( p->alpha < p->alpha_end ) )
+					p->alpha = p->alpha_start;
+				// Fading in
+				if ( ( p->alpha_start < p->alpha_end ) && ( p->alpha > p->alpha_end ) )
+					p->alpha = p->alpha_start;
+				break;
+			}
+			case ANIMATE_LOOP_REVERSE:
+			{
+				if ( p->alpha_start > p->alpha_end ) // fading out
 				{
-					p->alpha_step *= -1.0f;
-					p->alpha_finished = 0;
-					
+					// high to low
+					if ( p->alpha < p->alpha_end )
+					{
+						p->alpha_step *= -1.0f;
+						p->alpha = p->alpha_end;
+					}
+					// low to high
+					if ( p->alpha > p->alpha_start )
+					{
+						p->alpha_step *= -1.0f;
+						p->alpha = p->alpha_start;
+					}
+
 				}
+				else if ( p->alpha_start < p->alpha_end ) // fading in
+				{
+					// low to high
+					if ( p->alpha > p->alpha_end )
+					{
+						p->alpha_step *= -1.0f;
+						p->alpha = p->alpha_end;
+					}
+					// high to low
+					if ( p->alpha < p->alpha_start )
+					{
+						p->alpha_step *= -1.0f;
+						p->alpha = p->alpha_start;
+					}
+				}
+				break;
+			}
+			default:
+			{
 				break;
 			}
 		}
 	}
 
-	// Light level
+	// Scaling
+	if ( p->scale_think != DO_NOTHING )
+	{
+		for ( i = 0; i < 2; i++ )
+		{
+			p->scale[i] += gHUD.m_flTimeDelta * p->scale_step[i];
+		
+			switch ( p->scale_think )
+			{
+				case ANIMATE_DIE:
+				{
+					// Fading out
+					if ( ( p->scale_start[i] > p->scale_end[i] ) && ( p->scale[i] < p->scale_end[i] ) )
+						p->ltime = 0.0f;
+					// Fading in.
+					if ( ( p->scale_start[i] < p->scale_end[i] ) && ( p->scale[i] > p->scale_end[i] ) )
+						p->ltime = 0.0f;
+					break;
+				}
+				case ANIMATE_ONCE:
+				{
+					// Fading out
+					if ( ( p->scale_start[i] > p->scale_end[i] ) && ( p->scale[i] < p->scale_end[i] ) )
+						p->scale_step[i] = 0.0f;
+					// Fading in.
+					if ( ( p->scale_start[i] < p->scale_end[i] ) && ( p->scale[i] > p->scale_end[i] ) )
+						p->scale_step[i] = 0.0f;
+					break;
+				}
+				case ANIMATE_LOOP:
+				{
+					// Fading out
+					if ( ( p->scale_start[i] > p->scale_end[i] ) && ( p->scale[i] < p->scale_end[i] ) )
+						p->scale[i] = p->scale_start[i];
+					// Fading in
+					if ( ( p->scale_start[i] < p->scale_end[i] ) && ( p->scale[i] > p->scale_end[i] ) )
+						p->scale[i] = p->scale_start[i];
+					break;
+				}
+				case ANIMATE_LOOP_REVERSE:
+				{
+					if ( p->scale_start[i] > p->scale_end[i] ) // fading out
+					{
+						// high to low
+						if ( p->scale[i] < p->scale_end[i] )
+						{
+							p->scale_step[i] *= -1.0f;
+							p->scale[i] = p->scale_end[i];
+						}
+						// low to high
+						if ( p->scale[i] > p->scale_start[i] )
+						{
+							p->scale_step[i] *= -1.0f;
+							p->scale[i] = p->scale_start[i];
+						}
+
+					}
+					else if ( p->scale_start[i] < p->scale_end[i] ) // fading in
+					{
+						// low to high
+						if ( p->scale[i] > p->scale_end[i] )
+						{
+							p->scale_step[i] *= -1.0f;
+							p->scale[i] = p->scale_start[i];
+						}
+						// high to low
+						if ( p->scale[i] < p->scale_start[i] )
+						{
+							p->scale_step[i] *= -1.0f;
+							p->scale[i] = p->scale_start[i];
+						}
+					}
+					break;
+				}
+			}
+		}
+	}
+
+	// Color changing stuff
+	if ( p->color_think != DO_NOTHING )
+	{
+		for ( i = 0; i < 3; i++ )
+		{
+			p->color[i] += gHUD.m_flTimeDelta * p->color_step[i];
+		
+			switch ( p->color_think )
+			{
+				case ANIMATE_DIE:
+				{
+					// Fading out
+					if ( ( p->color_start[i] > p->color_end[i] ) && ( p->color[i] < p->color_end[i] ) )
+						p->ltime = 0.0f;
+					// Fading in.
+					if ( ( p->color_start[i] < p->color_end[i] ) && ( p->color[i] > p->color_end[i] ) )
+						p->ltime = 0.0f;
+					break;
+				}
+				case ANIMATE_ONCE:
+				{
+					// Fading out
+					if ( ( p->color_start[i] > p->color_end[i] ) && ( p->color[i] < p->color_end[i] ) )
+						p->color_step[i] = 0.0f;
+					// Fading in.
+					if ( ( p->color_start[i] < p->color_end[i] ) && ( p->color[i] > p->color_end[i] ) )
+						p->color_step[i] = 0.0f;
+					break;
+				}
+				case ANIMATE_LOOP:
+				{
+					// Fading out
+					if ( ( p->color_start[i] > p->color_end[i] ) && ( p->color[i] < p->color_end[i] ) )
+						p->color[i] = p->color_start[i];
+					// Fading in
+					if ( ( p->color_start[i] < p->color_end[i] ) && ( p->color[i] > p->color_end[i] ) )
+						p->color[i] = p->color_start[i];
+					break;
+				}
+				case ANIMATE_LOOP_REVERSE:
+				{
+					if ( p->color_start[i] > p->color_end[i] ) // fading out
+					{
+						// high to low
+						if ( p->color[i] < p->color_end[i] )
+						{
+							p->color_step[i] *= -1.0f;
+							p->color[i] = p->color_end[i];
+						}
+						// low to high
+						if ( p->color[i] > p->color_start[i] )
+						{
+							p->color_step[i] *= -1.0f;
+							p->color[i] = p->color_start[i];
+						}
+
+					}
+					else if ( p->color_start[i] < p->color_end[i] ) // fading in
+					{
+						// low to high
+						if ( p->color[i] > p->color_end[i] )
+						{
+							p->color_step[i] *= -1.0f;
+							p->color[i] = p->color_start[i];
+						}
+						// high to low
+						if ( p->color[i] < p->color_start[i] )
+						{
+							p->color_step[i] *= -1.0f;
+							p->color[i] = p->color_start[i];
+						}
+					}
+					break;
+				}
+			}
+		}
+	}
+
+	// Grabbing our current lightlevel..
 	if ( p->light_think != IGNORE_LIGHT )
 	{
 		cl_entity_t* light_ent;
@@ -305,74 +549,53 @@ void CParticleDan::ParticleThink( partdan_t* p )
 			IEngineStudio.StudioSetupLighting( &lighting );
 			IEngineStudio.StudioEntityLight( &lighting );
 
-			p->color.r = lighting.color[0] * lighting.shadelight;
-			p->color.g = lighting.color[1] * lighting.shadelight;
-			p->color.b = lighting.color[2] * lighting.shadelight;
-
 			// Stop checking once we're done.
 			if ( p->light_think == LIGHT_CHECK_ONCE )
 				p->light_think = IGNORE_LIGHT;
 		}
 	}
 
-	// Colliding
-	if ( p->collide_think != DONT_COLLIDE )
+	// Colliding..
+	switch ( p->collide_think )
 	{
-		switch ( p->collide_think )
+		case COLLIDE_STICK:
 		{
-			case COLLIDE_STICK:
-			{
-				if ( gEngfuncs.PM_PointContents( p->org, NULL ) != ( CONTENTS_EMPTY | CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) )
-					p->vel = p->accel = { 0.0f, 0.0f, 0.0f };
-				break;
-			}
-			case COLLIDE_DIE:
-			{
-				if ( gEngfuncs.PM_PointContents( p->org, NULL ) != ( CONTENTS_EMPTY | CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) )
-					p->ltime = 0.0f;
-				break;
-			}
-			case COLLIDE_BOUNCE:
-			{
-				pmtrace_t* tr;
+			if ( gEngfuncs.PM_PointContents( p->org, NULL ) != ( CONTENTS_EMPTY | CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) )
+				p->vel = p->accel = { 0.0f, 0.0f, 0.0f };
+			break;
+		}
+		case COLLIDE_DIE:
+		{
+			if ( gEngfuncs.PM_PointContents( p->org, NULL ) != ( CONTENTS_EMPTY | CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) )
+				p->ltime = 0.0f;
+			break;
+		}
+		case COLLIDE_BOUNCE:
+		{
+			pmtrace_t* tr;
 
-				tr = gEngfuncs.PM_TraceLine( p->old_org, p->org, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
+			tr = gEngfuncs.PM_TraceLine( p->old_org, p->org, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
 
-				if (tr && tr->fraction < 1.0f)
-				{
-					vec3_t vecNormal = tr->plane.normal;
+			if (tr && tr->fraction < 1.0f)
+			{
+				vec3_t vecNormal = tr->plane.normal;
 
-					p->org = tr->endpos;
-					p->vel = p->vel - 2 * DotProduct(p->vel, vecNormal) * vecNormal;
-					p->vel = p->vel * p->bounce;
-				}
-				break;
+				p->org = tr->endpos;
+				p->vel = p->vel - 2 * DotProduct(p->vel, vecNormal) * vecNormal;
+				p->vel = p->vel * p->bounce;
 			}
+			break;
 		}
 	}
-
-	p->ltime -= gHUD.m_flTimeDelta;
 }
 
 //===============================
 //	ParticleDraw
 //===============================
 
-void CParticleDan::ParticleDraw( partdan_t* p )
+void CParticleDan::ParticleDraw( ParticleDan* p )
 {
-	vec3_t v_angles, right, up;
-	vec3_t color;
-
-	// Convert color to a vector...
-	color = Color24ToVector( p->color );
-
-	// Setup AngleVector doohickey,
-	gEngfuncs.GetViewAngles( ( float* )v_angles );
-	AngleVectors( v_angles, NULL, right, up );
-
-	// Transform sprite.
-	VectorScale( right, p->scale.x, right );
-	VectorScale( up, p->scale.y, up );
+	vec3_t v_angles, right, up, vertex;
 
 	// Sprite model check.
 	if ( p->model == NULL )
@@ -385,26 +608,39 @@ void CParticleDan::ParticleDraw( partdan_t* p )
 		}
 	}
 
+	// Setup AngleVector doohickey,
+	gEngfuncs.GetViewAngles( ( float* )v_angles );
+	AngleVectors( v_angles, NULL, right, up );
+
+	// Transform sprite.
+	VectorScale( right, p->scale.x, right );
+	VectorScale( up, p->scale.y, up );
+
 	// Render particle.
 	gEngfuncs.pTriAPI->RenderMode( p->rendermode );
 	gEngfuncs.pTriAPI->SpriteTexture( p->model, p->frame );
-	gEngfuncs.pTriAPI->Color4f( color[0], color[1], color[2], p->alpha );
+	gEngfuncs.pTriAPI->Color4f( p->color[0], p->color[1], p->color[2], p->alpha );
+	gEngfuncs.pTriAPI->Brightness( p->brightness );
 	gEngfuncs.pTriAPI->CullFace( TRI_NONE );
 	gEngfuncs.pTriAPI->Begin( TRI_QUADS );
 
+	vertex = p->org - right + up;
 	gEngfuncs.pTriAPI->TexCoord2f( 0, 0 );
-	gEngfuncs.pTriAPI->Vertex3f( p->org[0] - right[0] + up[0] ,  p->org[1] - right[1] + up[1] ,  p->org[2] - right[2] + up[2] );
+	gEngfuncs.pTriAPI->Vertex3fv( vertex );
 
+	vertex = p->org - right - up;
 	gEngfuncs.pTriAPI->TexCoord2f( 0, 1 );
-	gEngfuncs.pTriAPI->Vertex3f( p->org[0] - right[0] - up[0] ,  p->org[1] - right[1] - up[1] ,  p->org[2] - right[2] - up[2] );
+	gEngfuncs.pTriAPI->Vertex3fv( vertex );
 
+	vertex = p->org + right - up;
 	gEngfuncs.pTriAPI->TexCoord2f( 1, 1 );
-	gEngfuncs.pTriAPI->Vertex3f( p->org[0] + right[0] - up[0] , p->org[1] + right[1] - up[1] , p->org[2] + right[2] - up[2] );
+	gEngfuncs.pTriAPI->Vertex3fv( vertex );
 
+	vertex = p->org + right + up;
 	gEngfuncs.pTriAPI->TexCoord2f( 1, 0 );
-	gEngfuncs.pTriAPI->Vertex3f( p->org[0] + right[0] + up[0] , p->org[1] + right[1] + up[1] , p->org[2] + right[2] + up[2] );
+	gEngfuncs.pTriAPI->Vertex3fv( vertex );
 
-	gEngfuncs.pTriAPI->End(); //end our list of vertexes
+	gEngfuncs.pTriAPI->End();
 	gEngfuncs.pTriAPI->RenderMode(kRenderNormal);
 }
 
@@ -413,8 +649,95 @@ void CParticleDan::ParticleDraw( partdan_t* p )
 //	Shoot plasmaballs...
 //===============================
 
+#if defined( FIX_LATER )
+float Interpolate(float a, float b, float t)
+{
+	return a + t * (b - a);
+}
+
+void flamethrower(void)
+{
+	cl_entity_t* ent = gEngfuncs.GetLocalPlayer();
+	vec3_t fwd, rt, up, vel, org;
+	vec3_t oldfwd, oldrt, oldup, oldvel, oldorg;
+	//vec3_t lerpfwd, lerprt, lerpup;
+	vec3_t lerporg, lerpvel;
+
+	AngleVectors(v_angles, fwd, rt, up);
+	AngleVectors(v_lastAngles, oldfwd, oldrt, oldup);
+
+	vel = ent->curstate.velocity + fwd * 800.0f;
+	oldvel = ent->prevstate.velocity + oldfwd * 800.0f;
+
+	org = ent->origin + Vector(0, 0, 18) + fwd * 16.0f + rt * 8.0f;
+	oldorg = ent->prevstate.origin + Vector(0, 0, 18) + oldfwd * 16.0f + oldrt * 8.0f;
+
+	float delta;
+	int cnt;
+	cnt = 0;
+	delta = (org - oldorg).Length();
+
+	ParticleDan* p;
+	while (cnt < 30 && delta > 0)
+	{
+		if ((p = gParticleDan.GetParticlePointer()) != NULL)
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				oldorg[i] = Interpolate(oldorg[i], org[i], gHUD.m_flTimeDelta);
+				oldvel[i] = Interpolate(oldvel[i], vel[i], gHUD.m_flTimeDelta);
+			}
+
+			VectorCopy(oldorg, lerporg);
+			VectorCopy(oldvel, lerpvel);
+
+			p->org = lerporg;
+			p->vel = lerpvel;
+
+			p->sprite = "sprites/kp_explode1.spr";
+			p->rendermode = kRenderTransAdd;
+			p->brightness = 1.0f;
+
+			gParticleDan.SetColor(p, gParticleDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
+			gParticleDan.SetScale(p, { 8, 8 }, { 128.0f, 128.0f }, { 32.0f, 32.0f }, ANIMATE_ONCE);
+			gParticleDan.SetFade(p, 1, 0, 0);
+			gParticleDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
+
+			p->ltime = 2.0f;
+			p->collide_think = COLLIDE_STICK;
+			cnt++;
+		}
+	}
+
+
+	if ((p = gParticleDan.GetParticlePointer()) != NULL)
+	{
+
+		p->org = org;
+		p->vel = vel;
+
+		p->sprite = "sprites/kp_explode1.spr";
+		p->rendermode = kRenderTransAdd;
+		p->brightness = 1.0f;
+
+		gParticleDan.SetColor(p, gParticleDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
+		gParticleDan.SetScale(p, { 8, 8 }, { 128.0f, 128.0f }, { 32.0f, 32.0f }, ANIMATE_ONCE);
+		gParticleDan.SetFade(p, 1, 0, 0);
+		gParticleDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
+
+		p->ltime = 2.0f;
+		p->collide_think = COLLIDE_STICK;
+		cnt++;
+	}
+}
+#endif
+
 void CParticleDan::CreateTestParticles(void)
 {
+	vec3_t vecDir;
+	float x, y, z;
+	int i;
+
 	if ( !m_iShownYet )
 	{
 		gEngfuncs.Con_Printf("CreateTestParticles: click to create particles\n");
@@ -425,50 +748,8 @@ void CParticleDan::CreateTestParticles(void)
 	{
 		if (m_flEmissionRate <= 0.0f)
 		{
-			cl_entity_t* ent = gEngfuncs.GetLocalPlayer();
-			partdan_t* p;
-
-			vec3_t forward, right, v_angles;
-			gEngfuncs.GetViewAngles((float*)v_angles);
-			AngleVectors(v_angles, forward, right, NULL);
-
-			p = GetParticlePointer();
-
-			if (p)
-			{
-				p->org = ent->origin + Vector(0, 0, 18) + forward * 16.0f + right * 8.0f;
-				p->vel = ent->curstate.velocity + forward * 800.0f;
-				p->accel = { 0.0f, 0.0f, -400.0f };
-				p->ang = 0;
-				p->angvel = 0;
-				p->bounce = 0.5f;
-
-				p->sprite = "sprites/exit1.spr";
-				p->color.r = p->color.g = p->color.b = 255;
-				p->rendermode = kRenderTransAdd;
-
-				p->fps = 30;
-				p->frame_max = 24;
-				p->frame = 0;
-
-				p->alpha = 1.0;
-				p->alpha_step = -2.0f;
-				p->alpha_max = 0.0f;
-
-				p->scale = { 0.0f, 0.0f };
-				p->scale_step = { 8.0f, 8.0f };
-				p->scale_max = { 16.0f, 16.0f };
-
-				p->idx = 0;
-				p->ltime = 5.0f;
-
-				p->collide_think = COLLIDE_BOUNCE;
-				p->anim_think = ANIMATE_LOOP;
-				p->alpha_think = FADE_IN_OUT;
-				p->scale_think = SCALE_ONCE;
-				p->light_think = IGNORE_LIGHT;
-			}
-			m_flEmissionRate = 0.1f;
+			//flamethrower();
+			m_flEmissionRate = 0.025f;
 		}
 
 		m_flEmissionRate -= gHUD.m_flTimeDelta;
@@ -477,7 +758,7 @@ void CParticleDan::CreateTestParticles(void)
 	}
 }
 
-#if 0
+#if defined( TEST_IT )
 
 //===============================
 //	DrawCoolParticles
@@ -486,47 +767,32 @@ void CParticleDan::CreateTestParticles(void)
 
 void DrawCoolParticles( void )
 {
-	partdan_t* p;
-	p = gParticleDan.GetParticlePointer();
-
 	cl_entity_t* ent = gEngfuncs.GetLocalPlayer();
-	vec3_t forward, v_angles;
+	ParticleDan* p;
 
-	gEngfuncs.GetViewAngles((float*)v_angles);
-	AngleVectors(v_angles, forward, NULL, NULL);
-
-	if (p)
+	for ( int i = 0; i < 256; i++ )
 	{
-		p->org = ent->origin + Vector(0, 0, 28) + forward * 16.0f;
-		p->vel = ent->curstate.velocity + forward * 300.0f;
-		p->accel = { 0, 0, 0 };
-		p->ang = 0;
-		p->angvel = 0;
+		if ( ( p = gParticleDan.GetParticlePointer() ) != NULL )
+		{
+			for ( int j = 0; j < 3; j++ )
+				p->vel[j] = gEngfuncs.pfnRandomFloat( -512.0f, 512.0f );
+			p->org = ent->origin;
+			p->accel = { 0.0f, 0.0f, -400.0f };
+			p->bounce = 0.5f;
 
-		p->sprite = "sprites/exit1.spr";
-		p->color.r = p->color.g = p->color.b = 255;
-		p->rendermode = kRenderTransAdd;
+			p->sprite = "sprites/exit1.spr";
+			p->rendermode = kRenderTransAdd;
+			p->brightness = 1.0f;
 
-		p->fps = 20;
-		p->frame_max = 24;
-		p->frame = 0;
+			gParticleDan.SetColor( p, gParticleDan.RGBToColor4f(0, 255, 255), gParticleDan.RGBToColor4f(255, 255, 0), { 0.5f, 0.0f, -0.5f }, ANIMATE_ONCE );
+			gParticleDan.SetScale( p, { 16.0f, 16.0f }, { 0.0f, 0.0f }, { -8.0f, -8.0f }, ANIMATE_DIE );
+			gParticleDan.SetFade( p, 0.0f, 1.0f, 1.0f, ANIMATE_LOOP_REVERSE );
+			gParticleDan.SetAnimate( p, 0, 24, 20, ANIMATE_LOOP );
 
-		p->alpha = 1.0;
-		p->alpha_step = 0.0f;
-		p->alpha_max = 0.0f;
-
-		p->scale = { 8.0f, 8.0f };
-		p->scale_step = { 0.0f, 0.0f };
-		p->scale_max = { 0.0f, 0.0f };
-
-		p->idx = 0;
-		p->ltime = 1.0f;
-
-		p->collide_think = COLLIDE_DIE;
-		p->anim_think = ANIMATE_LOOP;
-		p->alpha_think = FADE_IN_OUT;
-		p->scale_think = SCALE_IN_OUT;
-		p->light_think = IGNORE_LIGHT;
+			p->ltime = 5.0f;
+			p->collide_think = COLLIDE_BOUNCE;
+			p->light_think = IGNORE_LIGHT;
+		}
 	}
 }
 

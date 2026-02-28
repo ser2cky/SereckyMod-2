@@ -31,8 +31,8 @@ class CHudFont
 public:
 	hl_font_t*	GetFontPointer( char* fontname );
 	void		VidInit( void );
-	int			DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int g, int b, int frame, int rendermode );
-	int			DrawString( hl_font_t* font, int x, int y, int r, int g, int b, int frame, int rendermode, char* str );
+	int			DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int g, int b, int frame, int rendermode, int flags = 0 );
+	int			DrawString( hl_font_t* font, char* str, int x, int y, int r, int g, int b, int frame, int rendermode, int flags = 0 );
 	hl_font_t*	gCreditsFont;
 private:
 	hl_font_t	m_Fonts[MAX_FONTS];

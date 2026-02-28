@@ -80,19 +80,20 @@ void RGBAToColor4f( float *r, float *g, float *b, float *a )
 
 void AdjustTransformations( unsigned int *x, unsigned int *y, unsigned int *w, unsigned int *h )
 {
-	*x *= gHUD.GetXScale();
-	*y *= gHUD.GetYScale();
-	*w *= gHUD.GetXScale();
-	*h *= gHUD.GetYScale();
+	if ( x ) *x *= gHUD.GetXScale();
+	if ( y ) *y *= gHUD.GetYScale();
+	if ( w ) *w *= gHUD.GetXScale();
+	if ( h ) *h *= gHUD.GetYScale();
 }
 
 //=======================================
 //	DrawQuad
 //=======================================
 
-void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, float fLeft, float fRight, float fTop, float fBottom )
+void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, float fLeft, float fRight, float fTop, float fBottom, int flags )
 {
-	AdjustTransformations( &x, &y, &w, &h );
+	if ( !( flags & HFLAG_DONT_SCALE ) )
+		AdjustTransformations( &x, &y, &w, &h );
 
 	//gEngfuncs.Con_Printf("%.2f %.2f %.2f %.2f\n", fLeft, fRight, fTop, fBottom);
 
@@ -121,14 +122,11 @@ void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, f
 
 int ValidateWRect( const wrect_t* prc )
 {
-	if (!prc)
+	if ( !prc )
 		return FALSE;
 
-	if ((prc->left >= prc->right) || (prc->top >= prc->bottom))
-	{
-		//!!!UNDONE Dev only warning msg
+	if ( ( prc->left >= prc->right ) || ( prc->top >= prc->bottom ) )
 		return FALSE;
-	}
 
 	return TRUE;
 }
@@ -142,18 +140,18 @@ int IntersectWRect( const wrect_t* prc1, const wrect_t* prc2, wrect_t* prc )
 {
 	wrect_t rc;
 
-	if (!prc)
+	if ( !prc )
 		prc = &rc;
 
-	prc->left = max(prc1->left, prc2->left);
-	prc->right = min(prc1->right, prc2->right);
+	prc->left = max( prc1->left, prc2->left );
+	prc->right = min( prc1->right, prc2->right );
 
-	if (prc->left < prc->right)
+	if ( prc->left < prc->right )
 	{
-		prc->top = max(prc1->top, prc2->top);
-		prc->bottom = min(prc1->bottom, prc2->bottom);
+		prc->top = max( prc1->top, prc2->top );
+		prc->bottom = min( prc1->bottom, prc2->bottom );
 
-		if (prc->top < prc->bottom)
+		if ( prc->top < prc->bottom )
 			return TRUE;
 	}
 
@@ -164,11 +162,11 @@ int IntersectWRect( const wrect_t* prc1, const wrect_t* prc2, wrect_t* prc )
 //	AdjustSubRect
 //=======================================
 
-void AdjustSubRect( mspriteframe_t* pFrame, float* pfLeft, float* pfRight, float* pfTop, float* pfBottom, int* pw, int* ph, const wrect_t* prcSubRect )
+void AdjustSubRect( mspriteframe_t* pFrame, float* pfLeft, float* pfRight, float* pfTop, float* pfBottom, int* pw, int* ph, const wrect_t* prcSubRect)
 {
 	wrect_t rc;
 
-	if (!ValidateWRect(prcSubRect))
+	if ( !ValidateWRect( prcSubRect ) )
 		return;
 
 	// clip sub rect to sprite
@@ -177,23 +175,23 @@ void AdjustSubRect( mspriteframe_t* pFrame, float* pfLeft, float* pfRight, float
 	rc.right = *pw;
 	rc.bottom = *ph;
 
-	if (!IntersectWRect(prcSubRect, &rc, &rc))
+	if ( !IntersectWRect( prcSubRect, &rc, &rc ) )
 		return;
 
 	*pw = rc.right - rc.left;
 	*ph = rc.bottom - rc.top;
 
-	*pfLeft = rc.left / (float)pFrame->width;
-	*pfRight = rc.right / (float)pFrame->width;
-	*pfTop = rc.top / (float)pFrame->height;
-	*pfBottom = rc.bottom / (float)pFrame->height;
+	*pfLeft = rc.left / ( float )pFrame->width;
+	*pfRight = rc.right / ( float )pFrame->width;
+	*pfTop = rc.top / ( float )pFrame->height;
+	*pfBottom = rc.bottom / ( float )pFrame->height;
 }
 
 //=======================================
 //	TriApi_DrawFrame
 //=======================================
 
-void TriApi_DrawFrame( mspriteframe_t* pFrame, int x, int y, const wrect_t* prcSubRect )
+void TriApi_DrawFrame( mspriteframe_t* pFrame, int x, int y, const wrect_t* prcSubRect, int flags )
 {
 	float	fLeft = 0.0f;
 	float	fRight = 1.0f;
@@ -209,7 +207,7 @@ void TriApi_DrawFrame( mspriteframe_t* pFrame, int x, int y, const wrect_t* prcS
 	if ( prcSubRect != NULL )
 		AdjustSubRect(pFrame, &fLeft, &fRight, &fTop, &fBottom, &iWidth, &iHeight, prcSubRect);
 
-	DrawQuad( x, y, iWidth, iHeight, fLeft, fRight, fTop, fBottom );
+	DrawQuad( x, y, iWidth, iHeight, fLeft, fRight, fTop, fBottom, flags );
 }
 
 //=======================================
@@ -226,9 +224,9 @@ void TriApi_SetSprite( HSPRITE hPic, int r, int g, int b )
 		return;
 	}
 
-	gpSprite = (model_s*)gEngfuncs.GetSpritePointer( hPic );
+	gpSprite = ( model_s* )gEngfuncs.GetSpritePointer( hPic );
 	r_ = r; b_ = b; g_ = g;
-	RGBAToColor4f(&r_, &g_, &b_, NULL);
+	RGBAToColor4f( &r_, &g_, &b_, NULL );
 	gEngfuncs.pTriAPI->Color4f( r_, g_, b_, 1.0f );
 }
 
@@ -236,7 +234,7 @@ void TriApi_SetSprite( HSPRITE hPic, int r, int g, int b )
 //	TriApi_DrawSprite
 //=======================================
 
-void TriApi_DrawSprite( int frame, int x, int y, const wrect_t* prc )
+void TriApi_DrawSprite( int frame, int x, int y, const wrect_t* prc, int rendermode, int flags )
 {
 	mspriteframe_t* pFrame;
 
@@ -246,23 +244,24 @@ void TriApi_DrawSprite( int frame, int x, int y, const wrect_t* prc )
 		return;
 	}
 
-	if (gpSprite == NULL)
+	if ( gpSprite == NULL )
 		return;
 	
-	pFrame = R_GetSpriteFrame(gpSprite, frame);
+	pFrame = R_GetSpriteFrame( gpSprite, frame );
 
-	if (pFrame == NULL)
+	if ( pFrame == NULL )
 		gEngfuncs.Con_Printf("TriApi_DrawSprite: invalid frame\n");
 
 	gEngfuncs.pTriAPI->SpriteTexture( gpSprite, frame );
-	TriApi_DrawFrame(pFrame, x, y, prc);
+	gEngfuncs.pTriAPI->RenderMode( rendermode );
+	TriApi_DrawFrame( pFrame, x, y, prc, flags );
 }
 
 //=======================================
 //	TriApi_DrawHoles
 //=======================================
 
-void TriApi_DrawHoles( int frame, int x, int y, const wrect_t* prc )
+void TriApi_DrawHoles( int frame, int x, int y, const wrect_t* prc, int flags )
 {
 	mspriteframe_t* pFrame;
 
@@ -272,20 +271,21 @@ void TriApi_DrawHoles( int frame, int x, int y, const wrect_t* prc )
 		return;
 	}
 
-	if (gpSprite == NULL)
+	if ( gpSprite == NULL )
 		return;
-
-	pFrame = R_GetSpriteFrame(gpSprite, frame);
+	
+	pFrame = R_GetSpriteFrame( gpSprite, frame );
 
 	gEngfuncs.pTriAPI->SpriteTexture( gpSprite, frame );
-	TriApi_DrawFrame(pFrame, x, y, prc);
+	gEngfuncs.pTriAPI->RenderMode( kRenderTransTexture );
+	TriApi_DrawFrame( pFrame, x, y, prc, flags );
 }
 
 //=======================================
 //	TriApi_DrawAdditive
 //=======================================
 
-void TriApi_DrawAdditive( int frame, int x, int y, const wrect_t* prcSubRect )
+void TriApi_DrawAdditive( int frame, int x, int y, const wrect_t* prcSubRect, int flags )
 {
 	mspriteframe_t* pFrame;
 
@@ -295,14 +295,14 @@ void TriApi_DrawAdditive( int frame, int x, int y, const wrect_t* prcSubRect )
 		return;
 	}
 
-	if (gpSprite == NULL)
+	if ( gpSprite == NULL )
 		return;
-
-	pFrame = R_GetSpriteFrame(gpSprite, frame);
+	
+	pFrame = R_GetSpriteFrame( gpSprite, frame );
 
 	gEngfuncs.pTriAPI->SpriteTexture( gpSprite, frame );
 	gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
-	TriApi_DrawFrame(pFrame, x, y, prcSubRect);
+	TriApi_DrawFrame( pFrame, x, y, prcSubRect, flags );
 }
 
 //=======================================
@@ -311,7 +311,7 @@ void TriApi_DrawAdditive( int frame, int x, int y, const wrect_t* prcSubRect )
 //	like to fill in something that isn't additive.
 //=======================================
 
-void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a, int rendermode )
+void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a, int rendermode, int flags )
 {
 	model_s* sprite;
 	float r_, g_, b_, a_;
@@ -335,7 +335,7 @@ void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, 
 	gEngfuncs.pTriAPI->CullFace( TRI_NONE );
 	gEngfuncs.pTriAPI->Color4f( r_, g_, b_, a_ );
 	gEngfuncs.pTriAPI->SpriteTexture( sprite, 0 );
-	DrawQuad( x, y, width, height, 0.0f, 1.0f, 0.0f, 1.0f);
+	DrawQuad( x, y, width, height, 0.0f, 1.0f, 0.0f, 1.0f, flags );
 }
 
 //=======================================
@@ -345,7 +345,8 @@ void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, 
 
 void DrawTest( void )
 {
-	gFont.DrawString( gFont.gCreditsFont, gHUD.m_iScreenWidth/2, gHUD.m_iScreenHeight/2, 255, 128, 0, 0, kRenderTransAdd, "panther-eye nation rise up" );
+	//gFont.DrawString( gFont.gCreditsFont, "No text scaling", gHUD.m_iScreenWidth/2, gHUD.m_iScreenHeight/2, 255, 128, 0, 0, kRenderTransAdd, HFLAG_DONT_SCALE );
+	//gFont.DrawString( gFont.gCreditsFont, "Text scaling", gHUD.m_iScreenWidth/2, gHUD.m_iScreenHeight/2, 255, 255, 0, 0, kRenderTransAdd );
 #if 0
 	if (gHUD.m_pCvarScale)
 	{

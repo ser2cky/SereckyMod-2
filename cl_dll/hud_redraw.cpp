@@ -43,13 +43,13 @@ extern cvar_t *sensitivity;
 //	Clamp
 //=======================================
 
-float clamp( float min, float val, float max )
+float clamp( float min, float *val, float max )
 {
-	if (val <= min)
-		val = min;
-	if (val >= max)
-		val = max;
-	return val;
+	if ( min >= *val )
+		*val = min;
+	if ( max <= *val )
+		*val = max;
+	return *val;
 }
 
 //=======================================
@@ -60,7 +60,7 @@ float CHud::GetXScale( void )
 {
 	if ( !IEngineStudio.IsHardware() )
 		return 1.0f;
-	return clamp(1.0f, m_pCvarScale->value, ScreenWidth / 640.0f);
+	return clamp( 1.0f, &m_pCvarScale->value, ScreenWidth / 640.0f );
 }
 
 //=======================================
@@ -71,7 +71,7 @@ float CHud::GetYScale( void )
 {
 	if ( !IEngineStudio.IsHardware() )
 		return 1.0f;
-	return clamp(1.0f, m_pCvarScale->value, ScreenHeight / 480.0f);
+	return clamp( 1.0f, &m_pCvarScale->value, ScreenHeight / 480.0f );
 }
 
 //=======================================
@@ -308,7 +308,6 @@ int CHud :: DrawHudStringReverse( int xpos, int ypos, int iMinX, char *szString,
 			return xpos;
 		xpos = next;
 
-		//TextMessageDrawChar( xpos, ypos, *szIt, r, g, b );
 		gFont.DrawCharacter( gFont.gCreditsFont, xpos, ypos, *szIt, r, g, b, 0, kRenderTransAdd );
 	}
 

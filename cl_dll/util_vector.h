@@ -35,13 +35,14 @@ class Vector2D
 public:
 	inline Vector2D(void)									{ }
 	inline Vector2D(float X, float Y)						{ x = X; y = Y; }
+	inline Vector2D(float rgfl[2])							{ x = rgfl[0]; y = rgfl[1]; }
 	inline Vector2D operator+(const Vector2D& v)	const	{ return Vector2D(x+v.x, y+v.y);	}
 	inline Vector2D operator-(const Vector2D& v)	const	{ return Vector2D(x-v.x, y-v.y);	}
 	inline Vector2D operator*(float fl)				const	{ return Vector2D(x*fl, y*fl);	}
 	inline Vector2D operator/(float fl)				const	{ return Vector2D(x/fl, y/fl);	}
 	
 	inline float Length(void)						const	{ return (float)sqrt(x*x + y*y );		}
-
+	operator float *()								{ return &x; }
 	inline Vector2D Normalize ( void ) const
 	{
 		Vector2D vec2;

@@ -19,6 +19,7 @@
 #include "pm_defs.h"
 #include "pmtrace.h"	
 #include "pm_shared.h"
+#include "cl_hl_tent.h"
 
 #define DLLEXPORT __declspec( dllexport )
 
@@ -555,16 +556,16 @@ void DLLEXPORT HUD_StudioEvent( const struct mstudioevent_s *event, const struct
 	switch( event->event )
 	{
 	case 5001:
-		gEngfuncs.pEfxAPI->R_MuzzleFlash( (float *)&entity->attachment[0], atoi( event->options) );
+		gTempEnt.R_MuzzleFlash( (float *)&entity->attachment[0], atoi( event->options) );
 		break;
 	case 5011:
-		gEngfuncs.pEfxAPI->R_MuzzleFlash( (float *)&entity->attachment[1], atoi( event->options) );
+		gTempEnt.R_MuzzleFlash( (float *)&entity->attachment[1], atoi( event->options) );
 		break;
 	case 5021:
-		gEngfuncs.pEfxAPI->R_MuzzleFlash( (float *)&entity->attachment[2], atoi( event->options) );
+		gTempEnt.R_MuzzleFlash( (float *)&entity->attachment[2], atoi( event->options) );
 		break;
 	case 5031:
-		gEngfuncs.pEfxAPI->R_MuzzleFlash( (float *)&entity->attachment[3], atoi( event->options) );
+		gTempEnt.R_MuzzleFlash( (float *)&entity->attachment[3], atoi( event->options) );
 		break;
 	case 5002:
 		gEngfuncs.pEfxAPI->R_SparkEffect( (float *)&entity->attachment[0], atoi( event->options), -100, 100 );

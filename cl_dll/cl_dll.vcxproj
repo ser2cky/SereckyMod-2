@@ -227,6 +227,7 @@
     <ClInclude Include="ammohistory.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="cl_dll.h" />
+    <ClInclude Include="cl_hl_tent.h" />
     <ClInclude Include="com_weapons.h" />
     <ClInclude Include="demo.h" />
     <ClInclude Include="eventscripts.h" />

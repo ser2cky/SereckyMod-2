@@ -19,6 +19,9 @@
 #include "cl_util.h"
 #include "hlfont.h"
 #include "triangleapi.h"
+#include "r_studioint.h"
+
+extern engine_studio_api_t IEngineStudio;
 
 CHudFont gFont;
 
@@ -91,7 +94,7 @@ hl_font_t* CHudFont::GetFontPointer( char* fontname )
 //	DrawCharacter
 //=======================================
 
-int CHudFont::DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int g, int b, int frame, int rendermode )
+int CHudFont::DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int g, int b, int frame, int rendermode, int flags )
 {
 	int			rowheight, charwidth;
 	int			row, col;
@@ -101,7 +104,7 @@ int CHudFont::DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int 
 
 	rowheight = font->rowheight;
 
-	if (y <= -rowheight)
+	if ( y <= -rowheight )
 		return 0;			// totally off screen
 
 	charwidth = font->fontinfo[num].charwidth;
@@ -110,7 +113,7 @@ int CHudFont::DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int 
 		return charwidth;		// space
 
 	col = font->fontinfo[num].startoffset & 255;
-	row = (font->fontinfo[num].startoffset & ~255) >> 8;
+	row = ( font->fontinfo[num].startoffset & ~255 ) >> 8;
 	
 	rc.left = col;
 	rc.right = col + charwidth;
@@ -118,7 +121,19 @@ int CHudFont::DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int 
 	rc.bottom = row + rowheight;
 
 	SPR_Set( font->hPic, r, g, b );
-	SPR_DrawAdditive( frame, x, y, &rc );
+	switch ( rendermode )
+	{
+		case kRenderTransAdd:
+			SPR_DrawAdditive( frame, x, y, &rc, flags );
+			break;
+		case kRenderTransTexture:
+			SPR_DrawHoles( frame, x, y, &rc, flags );
+			break;
+		case kRenderNormal:
+		default:
+			SPR_Draw( frame, x, y, &rc, rendermode, flags );
+			break;
+	}
 
 	return charwidth;
 }
@@ -127,14 +142,14 @@ int CHudFont::DrawCharacter( hl_font_t* font, int x, int y, int num, int r, int 
 //	DrawString
 //=======================================
 
-int CHudFont::DrawString( hl_font_t* font, int x, int y, int r, int g, int b, int frame, int rendermode, char* str )
+int CHudFont::DrawString( hl_font_t* font, char* str, int x, int y, int r, int g, int b, int frame, int rendermode, int flags )
 {
 	if ( font == NULL )
 		return 0;
 
 	while (*str)
 	{
-		x += DrawCharacter( font, x, y, *str, r, g, b, frame, rendermode );
+		x += DrawCharacter( font, x, y, *str, r, g, b, frame, rendermode, flags );
 		str++;
 	}
 	return x;

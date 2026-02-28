@@ -444,5 +444,8 @@
     <ClInclude Include="hlfont.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cl_hl_tent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -33,39 +33,12 @@ typedef enum
 
 typedef enum
 {
-	DONT_ANIMATE = 0,
-	ANIMATE_ONCE = 1,
-	ANIMATE_DIE = 2,
-	ANIMATE_LOOP = 3,
+	DO_NOTHING = 0,				// Don't animate.
+	ANIMATE_ONCE = 1,			// Animate once.
+	ANIMATE_DIE = 2,			// Animate once and die.
+	ANIMATE_LOOP = 3,			// Animate in a loop.
+	ANIMATE_LOOP_REVERSE = 4	// Animate in a loop, but switch direction when hitting start or end of animation.
 } anim_think_t;
-
-//===============================
-//	Fading/Alpha behavior for particles.
-//===============================
-
-typedef enum
-{
-	DONT_FADE = 0,		// don't fade
-	FADE_ONCE = 1,		// just fade
-	FADE_DIE = 2,		// die when alpha reaches it's max
-	FADE_LOOP = 3,		// set alpha back to either 1 or 0 when hitting max
-	FADE_IN_OUT = 4,	// fade in and out once
-	FADE_IN_OUT_DIE = 5	// fade in and out then die.
-} fade_think_t;
-
-//===============================
-//	Scaling behavior for particles.
-//===============================
-
-typedef enum
-{
-	DONT_SCALE = 0,
-	SCALE_ONCE = 1,
-	SCALE_DIE = 2,
-	SCALE_LOOP = 3,
-	SCALE_IN_OUT = 4,
-	SCALE_IN_OUT_DIE = 5
-} scale_think_t;
 
 //===============================
 //	Light-level behavior for particles.
@@ -90,15 +63,13 @@ typedef struct emitter_s
 	vec3_t	accel;		// Emitter's rate of acceleration
 
 	// Behavior
-	int		idx;		// Entity that emitter is tied to.
-	float	ltime;		// Emitter's lifetime.
-	int		max_emit;	// Total amount of particles that can be emitted. Value of 0 disregards this.
-	int		max_emit_frame;		// How much an emitter can emit in a frame.
-	float	emit_freq;  // How frequently an emitter emits particles.
+	int		idx;				// Entity that emitter is tied to
+	float	ltime;				// Emitter's lifetime
+	int		max_emit;			// Total amount of particles that can be emitted. Value of 0 disregards this.
+	int		max_emit_frame;		// How much an emitter can emit during a frame
+	float	emit_freq;			// How frequently an emitter can emit particles
 
 	collide_type_t	collide_mode;	// Emitter collision behavior.
-
-	struct	emitter_s* next;
 } emitter_t;
 
 //===============================
@@ -118,22 +89,30 @@ typedef struct partdan_s
 	float	bounce;		// Particle's bouncefactor
 
 	// Appearence
-	const char		*sprite;	// Particle sprite name.
-	color24			color;		// Particle's RGB
+	const char		*sprite;	// Particle sprite name
 	unsigned int	rendermode;	// Particle's rendermode
+	float			brightness;	// Particle's brightness for TriAPI
+
+	vec3_t			color;			// Particle's current color
+	vec3_t			color_start;	// Particle's starting color
+	vec3_t			color_end;		// Particle's ending color
+	vec3_t			color_step;		// Particle color rate of change
 
 	// Animation
-	unsigned int	fps;		// Particle's animation framerate
-	unsigned int	frame_max;	// Max. amount of particle frames
-	unsigned int	frame;		// Current Frame particle's on
+	unsigned int	frame;			// Particle's current frame
+	unsigned int	frame_start;	// Particle's starting frame
+	unsigned int	frame_end;		// Particle's ending frame
+	unsigned int	framerate;		// Particle's framerate
 
-	float	alpha;			// Particle's current transparency
-	float	alpha_step;		// Particle transparency rate of change
-	float	alpha_max;		// Particle's max transparency
+	float			alpha;			// Particle's current alpha
+	float			alpha_start;	// Particle's starting transparency
+	float			alpha_end;		// Particle's ending transparency
+	float			alpha_step;		// Particle transparency rate of change
 
-	Vector2D	scale;			// Particle's current size.
-	Vector2D	scale_step;		// Particle size rate of change
-	Vector2D	scale_max;		// Particle's max size.
+	Vector2D		scale;			// Particle's size
+	Vector2D		scale_start;	// Particle's starting size
+	Vector2D		scale_end;		// Particle's ending size
+	Vector2D		scale_step;		// Particle's size rate of change
 
 	// Behavior
 	unsigned int	idx;		// Entity that particle is tied to
@@ -141,43 +120,44 @@ typedef struct partdan_s
 
 	collide_type_t	collide_think;	// Particle's collision behavior
 	anim_think_t	anim_think;		// Particle's animation behavior
-	fade_think_t	alpha_think;	// Particle's transparency behavior.
-	scale_think_t	scale_think;	// Particle's scaling behavior
-	light_think_t	light_think;	// Particle's light-level behavior.
+	anim_think_t	alpha_think;	// Particle's transparency behavior
+	anim_think_t	scale_think;	// Particle's scaling behavior
+	anim_think_t	color_think;	// Particle's color thinking behavior
+	light_think_t	light_think;	// Particle's light-level behavior
 
 	// Logic - don't touch!!
 	vec3_t	old_org;				// old org - used for bouncing
 
-	int		scale_dir;				// are we scaling up or down?
-	int		alpha_dir;				// are we fading in or out?
-	int		anim_dir;				// are we animating in reverse?
-
-	int		scale_finished;			// done scaling?
-	int		alpha_finished;			// done fading?
-	int		anim_finished;			// done animating?
-
-	int		alive;					// Well... Is our particle dead?
-	float	nextanim;				// Particle's animation thinker.
-	struct	model_s		*model;		// Particle model pointer.
-	struct	partdan_s	*next;
-} partdan_t;
+	float	nextanim;				// Particle's animation thinker
+	struct	model_s		*model;		// Particle's model pointer
+	struct	partdan_s	*next;		// pointer to next particle in particle pointer pool
+} ParticleDan;
 
 class CParticleDan
 {
 public:
-	partdan_t*	GetParticlePointer( void );
-	void		ManageParticles( void );
-	int			MsgFunc_AddEmitter( const char *pszName,  int iSize, void *pbuf );
+	ParticleDan*	GetParticlePointer( void );
+	void			ManageParticles( void );
+	int				MsgFunc_AddEmitter( const char *pszName,  int iSize, void *pbuf );
+
+	vec3_t		RGBToColor4f( float r, float g, float b );
+	void		SetColor( ParticleDan* p, vec3_t start, vec3_t end, vec3_t step, anim_think_t mode = DO_NOTHING );
+	void		SetScale( ParticleDan* p, Vector2D start, Vector2D end, Vector2D step, anim_think_t mode = DO_NOTHING ); // start scale, end scale, step, scale mode
+	void		SetFade( ParticleDan* p, float start, float end, float step, anim_think_t mode = DO_NOTHING ); // start alpha, end alpha, step, fade mode
+	void		SetAnimate( ParticleDan* p, int start, int end, int framerate, anim_think_t mode = DO_NOTHING ); // start frame, end frame, animation mode
+
 	int			Init( void );
 	int			VidInit(void);
 private:
-	emitter_t	m_Emitters[MAX_EMITTERS];
-	partdan_t	m_Particles[MAX_PARTICLES];
-	int			m_iActiveParticles;
+	emitter_t		m_Emitters[MAX_EMITTERS];
+	ParticleDan		m_Particles[MAX_PARTICLES];
+	ParticleDan*	m_ActiveParticles;
+	ParticleDan*	m_FreeParticles;
+	int				m_iActiveParticles;
 
-	void		ParticleThink( partdan_t* p );
-	void		ParticleDraw( partdan_t* p );
-	void		ParseScript( void );
+	void		ParticleThink( ParticleDan* p );
+	void		ParticleDraw( ParticleDan* p );
+	void		ParseScript( const char* pszScript );
 
 	cvar_t*		m_pCvarTestParticles;
 	void		CreateTestParticles( void );

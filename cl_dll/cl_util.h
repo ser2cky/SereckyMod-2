@@ -44,11 +44,14 @@ inline struct cvar_s *CVAR_CREATE( const char *cv, const char *val, const int fl
 
 // SERECKY JAN-21-26: hud scaling start
 extern void TriApi_SetSprite( HSPRITE hPic, int r, int g, int b );
-extern void TriApi_DrawSprite( int frame, int x, int y, const wrect_t* prc );
-extern void TriApi_DrawHoles( int frame, int x, int y, const wrect_t* prc );
-extern void TriApi_DrawAdditive( int frame, int x, int y, const wrect_t* prcSubRect );
-extern void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a, int rendermode = kRenderTransAdd );
-extern void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, float fLeft, float fRight, float fTop, float fBottom );
+extern void TriApi_DrawSprite( int frame, int x, int y, const wrect_t* prc, int rendermode = kRenderNormal, int flags = 0 );
+extern void TriApi_DrawHoles( int frame, int x, int y, const wrect_t* prc, int flags = 0 );
+extern void TriApi_DrawAdditive( int frame, int x, int y, const wrect_t* prcSubRect, int flags = 0 );
+extern void TriApi_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a, int rendermode = kRenderTransAdd, int flags = 0 );
+extern void DrawQuad( unsigned int x, unsigned int y, unsigned int w, unsigned int h, float fLeft, float fRight, float fTop, float fBottom, int flags = 0 );
+extern void RGBAToColor4f( float *r, float *g, float *b, float *a );
+
+#define	HFLAG_DONT_SCALE		( 1 >> 0 )
 
 #define SPR_Load (*gEngfuncs.pfnSPR_Load)
 #define SPR_Set (*TriApi_SetSprite)

@@ -1675,3 +1675,33 @@ void CStudioModelRenderer::StudioRenderFinal(void)
 	}
 }
 
+/*
+====================
+StudioBodyVariations
+
+====================
+*/
+
+int CStudioModelRenderer::StudioBodyVariations( model_t* model )
+{
+	studiohdr_t* pstudiohdr;
+	mstudiobodyparts_t* pbodypart;
+	int		i, count;
+
+	if (model->type != mod_studio)
+		return 0;
+
+	pstudiohdr = (studiohdr_t*)IEngineStudio.Mod_Extradata(model);
+	if (!pstudiohdr)
+		return 0;
+
+	count = 1;
+
+	pbodypart = (mstudiobodyparts_t*)((byte*)pstudiohdr + pstudiohdr->bodypartindex);
+	for (i = 0; i < pstudiohdr->numbodyparts; i++, pbodypart++)
+	{
+		count *= pbodypart->nummodels;
+	}
+
+	return count;
+}

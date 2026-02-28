@@ -791,10 +791,16 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 			}
 		}
 	}
-
+	static int frames = 0;
+	frames++;
 	// Store off v_angles before munging for third person
 	v_angles = pparams->viewangles;
-	v_lastAngles = pparams->viewangles;
+	if ( frames % 2 == 0 )
+		v_lastAngles = pparams->viewangles;
+
+	gEngfuncs.Con_Printf("old: %.2f %.2f %.2f\n", v_lastAngles.x, v_lastAngles.y, v_lastAngles.z);
+	gEngfuncs.Con_Printf("new: %.2f %.2f %.2f\n", v_angles.x, v_angles.y, v_angles.z);
+
 //	v_cl_angles = pparams->cl_viewangles;	// keep old user mouse angles !
 	if ( CL_IsThirdPerson() )
 	{
