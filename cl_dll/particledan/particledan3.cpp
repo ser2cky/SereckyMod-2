@@ -259,334 +259,6 @@ void CParticleDan::ParticleThink( ParticleDan* p )
 	VectorMA( p->vel, gHUD.m_flTimeDelta, p->accel, p->vel );
 	VectorMA( p->org, gHUD.m_flTimeDelta, p->vel, p->org );
 	p->ang += p->angvel * gHUD.m_flTimeDelta;
-
-	// Animating
-	if ( p->anim_think != DO_NOTHING )
-	{
-		if ( p->nextanim <= 0.0f )
-		{
-			p->frame += 1;
-			p->nextanim = 1.0f / p->framerate;
-		}
-
-		p->nextanim -= gHUD.m_flTimeDelta;
-		
-		switch ( p->anim_think )
-		{
-			case ANIMATE_DIE:
-			{
-				if ( p->frame > p->frame_end )
-					p->ltime = 0.0f;
-				break;
-			}
-			case ANIMATE_ONCE:
-			{
-				if ( p->frame > p->frame_end )
-					p->nextanim = 10.0f;
-				break;
-			}
-			case ANIMATE_LOOP:
-			{
-				if ( p->frame > p->frame_end )
-					p->frame = p->frame_start;
-				break;
-			}
-			default:
-			{
-				break;
-			}
-		}
-	}
-
-	// Fading in & out
-	if ( p->alpha_think != DO_NOTHING )
-	{
-		p->alpha += gHUD.m_flTimeDelta * p->alpha_step;
-		
-		switch ( p->alpha_think )
-		{
-			case ANIMATE_DIE:
-			{
-				// Fading out
-				if ( ( p->alpha_start > p->alpha_end ) && ( p->alpha < p->alpha_end ) )
-					p->ltime = 0.0f;
-				// Fading in.
-				if ( ( p->alpha_start < p->alpha_end ) && ( p->alpha > p->alpha_end ) )
-					p->ltime = 0.0f;
-				break;
-			}
-			case ANIMATE_ONCE:
-			{
-				// Fading out
-				if ( ( p->alpha_start > p->alpha_end ) && ( p->alpha < p->alpha_end ) )
-					p->alpha_step = 0.0f;
-				// Fading in.
-				if ( ( p->alpha_start < p->alpha_end ) && ( p->alpha > p->alpha_end ) )
-					p->alpha_step = 0.0f;
-				break;
-			}
-			case ANIMATE_LOOP:
-			{
-				// Fading out
-				if ( ( p->alpha_start > p->alpha_end ) && ( p->alpha < p->alpha_end ) )
-					p->alpha = p->alpha_start;
-				// Fading in
-				if ( ( p->alpha_start < p->alpha_end ) && ( p->alpha > p->alpha_end ) )
-					p->alpha = p->alpha_start;
-				break;
-			}
-			case ANIMATE_LOOP_REVERSE:
-			{
-				if ( p->alpha_start > p->alpha_end ) // fading out
-				{
-					// high to low
-					if ( p->alpha < p->alpha_end )
-					{
-						p->alpha_step *= -1.0f;
-						p->alpha = p->alpha_end;
-					}
-					// low to high
-					if ( p->alpha > p->alpha_start )
-					{
-						p->alpha_step *= -1.0f;
-						p->alpha = p->alpha_start;
-					}
-
-				}
-				else if ( p->alpha_start < p->alpha_end ) // fading in
-				{
-					// low to high
-					if ( p->alpha > p->alpha_end )
-					{
-						p->alpha_step *= -1.0f;
-						p->alpha = p->alpha_end;
-					}
-					// high to low
-					if ( p->alpha < p->alpha_start )
-					{
-						p->alpha_step *= -1.0f;
-						p->alpha = p->alpha_start;
-					}
-				}
-				break;
-			}
-			default:
-			{
-				break;
-			}
-		}
-	}
-
-	// Scaling
-	if ( p->scale_think != DO_NOTHING )
-	{
-		for ( i = 0; i < 2; i++ )
-		{
-			p->scale[i] += gHUD.m_flTimeDelta * p->scale_step[i];
-		
-			switch ( p->scale_think )
-			{
-				case ANIMATE_DIE:
-				{
-					// Fading out
-					if ( ( p->scale_start[i] > p->scale_end[i] ) && ( p->scale[i] < p->scale_end[i] ) )
-						p->ltime = 0.0f;
-					// Fading in.
-					if ( ( p->scale_start[i] < p->scale_end[i] ) && ( p->scale[i] > p->scale_end[i] ) )
-						p->ltime = 0.0f;
-					break;
-				}
-				case ANIMATE_ONCE:
-				{
-					// Fading out
-					if ( ( p->scale_start[i] > p->scale_end[i] ) && ( p->scale[i] < p->scale_end[i] ) )
-						p->scale_step[i] = 0.0f;
-					// Fading in.
-					if ( ( p->scale_start[i] < p->scale_end[i] ) && ( p->scale[i] > p->scale_end[i] ) )
-						p->scale_step[i] = 0.0f;
-					break;
-				}
-				case ANIMATE_LOOP:
-				{
-					// Fading out
-					if ( ( p->scale_start[i] > p->scale_end[i] ) && ( p->scale[i] < p->scale_end[i] ) )
-						p->scale[i] = p->scale_start[i];
-					// Fading in
-					if ( ( p->scale_start[i] < p->scale_end[i] ) && ( p->scale[i] > p->scale_end[i] ) )
-						p->scale[i] = p->scale_start[i];
-					break;
-				}
-				case ANIMATE_LOOP_REVERSE:
-				{
-					if ( p->scale_start[i] > p->scale_end[i] ) // fading out
-					{
-						// high to low
-						if ( p->scale[i] < p->scale_end[i] )
-						{
-							p->scale_step[i] *= -1.0f;
-							p->scale[i] = p->scale_end[i];
-						}
-						// low to high
-						if ( p->scale[i] > p->scale_start[i] )
-						{
-							p->scale_step[i] *= -1.0f;
-							p->scale[i] = p->scale_start[i];
-						}
-
-					}
-					else if ( p->scale_start[i] < p->scale_end[i] ) // fading in
-					{
-						// low to high
-						if ( p->scale[i] > p->scale_end[i] )
-						{
-							p->scale_step[i] *= -1.0f;
-							p->scale[i] = p->scale_start[i];
-						}
-						// high to low
-						if ( p->scale[i] < p->scale_start[i] )
-						{
-							p->scale_step[i] *= -1.0f;
-							p->scale[i] = p->scale_start[i];
-						}
-					}
-					break;
-				}
-			}
-		}
-	}
-
-	// Color changing stuff
-	if ( p->color_think != DO_NOTHING )
-	{
-		for ( i = 0; i < 3; i++ )
-		{
-			p->color[i] += gHUD.m_flTimeDelta * p->color_step[i];
-		
-			switch ( p->color_think )
-			{
-				case ANIMATE_DIE:
-				{
-					// Fading out
-					if ( ( p->color_start[i] > p->color_end[i] ) && ( p->color[i] < p->color_end[i] ) )
-						p->ltime = 0.0f;
-					// Fading in.
-					if ( ( p->color_start[i] < p->color_end[i] ) && ( p->color[i] > p->color_end[i] ) )
-						p->ltime = 0.0f;
-					break;
-				}
-				case ANIMATE_ONCE:
-				{
-					// Fading out
-					if ( ( p->color_start[i] > p->color_end[i] ) && ( p->color[i] < p->color_end[i] ) )
-						p->color_step[i] = 0.0f;
-					// Fading in.
-					if ( ( p->color_start[i] < p->color_end[i] ) && ( p->color[i] > p->color_end[i] ) )
-						p->color_step[i] = 0.0f;
-					break;
-				}
-				case ANIMATE_LOOP:
-				{
-					// Fading out
-					if ( ( p->color_start[i] > p->color_end[i] ) && ( p->color[i] < p->color_end[i] ) )
-						p->color[i] = p->color_start[i];
-					// Fading in
-					if ( ( p->color_start[i] < p->color_end[i] ) && ( p->color[i] > p->color_end[i] ) )
-						p->color[i] = p->color_start[i];
-					break;
-				}
-				case ANIMATE_LOOP_REVERSE:
-				{
-					if ( p->color_start[i] > p->color_end[i] ) // fading out
-					{
-						// high to low
-						if ( p->color[i] < p->color_end[i] )
-						{
-							p->color_step[i] *= -1.0f;
-							p->color[i] = p->color_end[i];
-						}
-						// low to high
-						if ( p->color[i] > p->color_start[i] )
-						{
-							p->color_step[i] *= -1.0f;
-							p->color[i] = p->color_start[i];
-						}
-
-					}
-					else if ( p->color_start[i] < p->color_end[i] ) // fading in
-					{
-						// low to high
-						if ( p->color[i] > p->color_end[i] )
-						{
-							p->color_step[i] *= -1.0f;
-							p->color[i] = p->color_start[i];
-						}
-						// high to low
-						if ( p->color[i] < p->color_start[i] )
-						{
-							p->color_step[i] *= -1.0f;
-							p->color[i] = p->color_start[i];
-						}
-					}
-					break;
-				}
-			}
-		}
-	}
-
-	// Grabbing our current lightlevel..
-	if ( p->light_think != IGNORE_LIGHT )
-	{
-		cl_entity_t* light_ent;
-		alight_t lighting;
-		vec3_t dir;
-
-		if ( ( light_ent = gEngfuncs.GetLocalPlayer() ) != NULL )
-		{
-			light_ent->origin = p->org;
-			lighting.plightvec = dir;
-
-			IEngineStudio.StudioDynamicLight( light_ent, &lighting );
-			IEngineStudio.StudioSetupLighting( &lighting );
-			IEngineStudio.StudioEntityLight( &lighting );
-
-			// Stop checking once we're done.
-			if ( p->light_think == LIGHT_CHECK_ONCE )
-				p->light_think = IGNORE_LIGHT;
-		}
-	}
-
-	// Colliding..
-	switch ( p->collide_think )
-	{
-		case COLLIDE_STICK:
-		{
-			if ( gEngfuncs.PM_PointContents( p->org, NULL ) != ( CONTENTS_EMPTY | CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) )
-				p->vel = p->accel = { 0.0f, 0.0f, 0.0f };
-			break;
-		}
-		case COLLIDE_DIE:
-		{
-			if ( gEngfuncs.PM_PointContents( p->org, NULL ) != ( CONTENTS_EMPTY | CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) )
-				p->ltime = 0.0f;
-			break;
-		}
-		case COLLIDE_BOUNCE:
-		{
-			pmtrace_t* tr;
-
-			tr = gEngfuncs.PM_TraceLine( p->old_org, p->org, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
-
-			if (tr && tr->fraction < 1.0f)
-			{
-				vec3_t vecNormal = tr->plane.normal;
-
-				p->org = tr->endpos;
-				p->vel = p->vel - 2 * DotProduct(p->vel, vecNormal) * vecNormal;
-				p->vel = p->vel * p->bounce;
-			}
-			break;
-		}
-	}
 }
 
 //===============================
@@ -645,99 +317,124 @@ void CParticleDan::ParticleDraw( ParticleDan* p )
 }
 
 //===============================
-//	CreateTestParticles
-//	Shoot plasmaballs...
+//	ShootFlameThrower
+//	create a fancy flamethrower effect similar to that of
+//	kingpin's.
 //===============================
 
-#if defined( FIX_LATER )
-float Interpolate(float a, float b, float t)
+#define MAX_FLAMES_PER_FRAME			30
+#define FLAME_MAX_MAKEUP_PERIOD			0.125
+#define FLAME_NOISE						64.0
+
+static float last_fire_time;
+static float fire_time;
+
+float Interpolate( float a, float b, float t )
 {
-	return a + t * (b - a);
+	return a + t * ( b - a );
 }
 
-void flamethrower(void)
+void ShootFlameThrower(void)
 {
-	cl_entity_t* ent = gEngfuncs.GetLocalPlayer();
-	vec3_t fwd, rt, up, vel, org;
-	vec3_t oldfwd, oldrt, oldup, oldvel, oldorg;
-	//vec3_t lerpfwd, lerprt, lerpup;
-	vec3_t lerporg, lerpvel;
+	float lerpfrac, delta;
+	int i;
 
-	AngleVectors(v_angles, fwd, rt, up);
-	AngleVectors(v_lastAngles, oldfwd, oldrt, oldup);
+	vec3_t old_fwd, cur_fwd, lerp_fwd;
+	vec3_t old_rt, cur_rt, lerp_rt;
+	vec3_t old_up, cur_up, lerp_up;
+	vec3_t old_org, cur_org, lerp_org;
 
-	vel = ent->curstate.velocity + fwd * 800.0f;
-	oldvel = ent->prevstate.velocity + oldfwd * 800.0f;
-
-	org = ent->origin + Vector(0, 0, 18) + fwd * 16.0f + rt * 8.0f;
-	oldorg = ent->prevstate.origin + Vector(0, 0, 18) + oldfwd * 16.0f + oldrt * 8.0f;
-
-	float delta;
-	int cnt;
-	cnt = 0;
-	delta = (org - oldorg).Length();
-
+	cl_entity_t* ent;
 	ParticleDan* p;
-	while (cnt < 30 && delta > 0)
+
+	if ( ( ent = gEngfuncs.GetLocalPlayer() ) == NULL )
+		return;
+
+	// set up vectors
+	AngleVectors( v_angles, cur_fwd, cur_rt, cur_up );
+	AngleVectors( v_lastAngles, old_fwd, old_rt, old_up );
+
+	VectorCopy( ent->curstate.origin, cur_org );
+	VectorCopy( ent->prevstate.origin, old_org );
+
+	cur_org = cur_org + Vector(0, 0, 18) + cur_fwd * 16.0f + cur_rt * 8.0f;
+	old_org = old_org + Vector(0, 0, 18) + old_fwd * 16.0f + old_rt * 8.0f;
+
+	// set up time
+	last_fire_time = fire_time;
+	fire_time = gHUD.m_flTime;
+	delta = fire_time - last_fire_time;
+
+	// SERECKY APR-1-26: to make up for the time lost between frames, we make extra flame 
+	// particles so that gaps created by spinning the camera around won't create ugly gaps 
+	// in our flame trail.
+
+	if (delta < FLAME_MAX_MAKEUP_PERIOD)
 	{
-		if ((p = gParticleDan.GetParticlePointer()) != NULL)
+		while ( last_fire_time <= fire_time )
 		{
-			for (int i = 0; i < 3; i++)
+			if (delta < 0.0)
+				break;
+
+			lerpfrac = (fire_time - last_fire_time) / delta;
+			lerpfrac = 1.0f - max(lerpfrac, 0.0f);
+			last_fire_time += gHUD.m_flTimeDelta / (float)MAX_FLAMES_PER_FRAME;
+
+			gEngfuncs.Con_Printf("%.2f %.2f frac %f\n", last_fire_time, fire_time, lerpfrac);
+
+			if ((p = gParticleDan.GetParticlePointer()) != NULL)
 			{
-				oldorg[i] = Interpolate(oldorg[i], org[i], gHUD.m_flTimeDelta);
-				oldvel[i] = Interpolate(oldvel[i], vel[i], gHUD.m_flTimeDelta);
+				for ( i = 0; i < 3; i++ )
+				{
+					lerp_fwd[i] = Interpolate( old_fwd[i], cur_fwd[i], lerpfrac );
+					lerp_rt[i] = Interpolate( old_rt[i], cur_rt[i], lerpfrac );
+					lerp_up[i] = Interpolate( old_up[i], cur_up[i], lerpfrac );
+					lerp_org[i] = Interpolate( old_org[i], cur_org[i], lerpfrac );
+				}
+
+				p->org = lerp_org = lerp_org + lerp_fwd * 4.0f;
+				p->vel = lerp_fwd * 1000.0f + lerp_rt * gEngfuncs.pfnRandomFloat( -FLAME_NOISE, FLAME_NOISE) + lerp_up * gEngfuncs.pfnRandomFloat( -FLAME_NOISE, FLAME_NOISE);
+
+				p->sprite = "sprites/kp_explode1.spr";
+				p->rendermode = kRenderTransAdd;
+				p->brightness = 1.0f;
+
+				gParticleDan.SetColor(p, gParticleDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
+				gParticleDan.SetScale(p, { 2.0f, 2.0f }, { 128.0f, 128.0f }, { 128.0f, 128.0f }, ANIMATE_ONCE);
+				gParticleDan.SetFade(p, 1.0f, 0.0f, 0.0f);
+				gParticleDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
+
+				p->ltime = 2.0f;
+				p->collide_think = COLLIDE_STICK;
 			}
-
-			VectorCopy(oldorg, lerporg);
-			VectorCopy(oldvel, lerpvel);
-
-			p->org = lerporg;
-			p->vel = lerpvel;
+		}
+	}
+	else
+	{
+		if ( ( p = gParticleDan.GetParticlePointer() ) != NULL )
+		{
+			p->org = cur_org;
+			p->vel = cur_fwd * 1000.0f + cur_rt * gEngfuncs.pfnRandomFloat( -FLAME_NOISE, FLAME_NOISE) + cur_up * gEngfuncs.pfnRandomFloat( -FLAME_NOISE, FLAME_NOISE);
 
 			p->sprite = "sprites/kp_explode1.spr";
 			p->rendermode = kRenderTransAdd;
 			p->brightness = 1.0f;
 
 			gParticleDan.SetColor(p, gParticleDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
-			gParticleDan.SetScale(p, { 8, 8 }, { 128.0f, 128.0f }, { 32.0f, 32.0f }, ANIMATE_ONCE);
-			gParticleDan.SetFade(p, 1, 0, 0);
+			gParticleDan.SetScale(p, { 2, 2 }, { 128.0f, 128.0f }, { 128.0f, 128.0f }, ANIMATE_ONCE);
+			gParticleDan.SetFade(p, 1.0f, 0.0f, 0.0f);
 			gParticleDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
 
 			p->ltime = 2.0f;
 			p->collide_think = COLLIDE_STICK;
-			cnt++;
+
 		}
 	}
-
-
-	if ((p = gParticleDan.GetParticlePointer()) != NULL)
-	{
-
-		p->org = org;
-		p->vel = vel;
-
-		p->sprite = "sprites/kp_explode1.spr";
-		p->rendermode = kRenderTransAdd;
-		p->brightness = 1.0f;
-
-		gParticleDan.SetColor(p, gParticleDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
-		gParticleDan.SetScale(p, { 8, 8 }, { 128.0f, 128.0f }, { 32.0f, 32.0f }, ANIMATE_ONCE);
-		gParticleDan.SetFade(p, 1, 0, 0);
-		gParticleDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
-
-		p->ltime = 2.0f;
-		p->collide_think = COLLIDE_STICK;
-		cnt++;
-	}
 }
-#endif
+
 
 void CParticleDan::CreateTestParticles(void)
 {
-	vec3_t vecDir;
-	float x, y, z;
-	int i;
-
 	if ( !m_iShownYet )
 	{
 		gEngfuncs.Con_Printf("CreateTestParticles: click to create particles\n");
@@ -746,14 +443,7 @@ void CParticleDan::CreateTestParticles(void)
 
 	if (gHUD.m_iKeyBits & IN_ATTACK)
 	{
-		if (m_flEmissionRate <= 0.0f)
-		{
-			//flamethrower();
-			m_flEmissionRate = 0.025f;
-		}
-
-		m_flEmissionRate -= gHUD.m_flTimeDelta;
-
+		ShootFlameThrower();
 		gHUD.m_iKeyBits &= ~IN_ATTACK;
 	}
 }

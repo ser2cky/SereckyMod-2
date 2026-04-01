@@ -88,6 +88,7 @@ float		v_cameraRelaxAngle	= 5.0f;
 float		v_cameraFocusAngle	= 35.0f;
 int			v_cameraMode = CAM_MODE_FOCUS;
 qboolean	v_resetCamera = 1;
+int			v_clientframe = 0;
 
 vec3_t ev_punchangle;
 
@@ -117,6 +118,7 @@ cvar_t	v_iroll_level		= {"v_iroll_level", "0.1", 0, 0.1};
 cvar_t	v_ipitch_level		= {"v_ipitch_level", "0.3", 0, 0.3};
 
 float	v_idlescale;  // used by TFC for concussion grenade effect
+int		v_framenum, v_oldframenum;
 
 //=============================================================================
 /*
@@ -791,15 +793,11 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 			}
 		}
 	}
-	static int frames = 0;
-	frames++;
+	
+	v_clientframe++;
 	// Store off v_angles before munging for third person
+	v_lastAngles = v_angles;
 	v_angles = pparams->viewangles;
-	if ( frames % 2 == 0 )
-		v_lastAngles = pparams->viewangles;
-
-	gEngfuncs.Con_Printf("old: %.2f %.2f %.2f\n", v_lastAngles.x, v_lastAngles.y, v_lastAngles.z);
-	gEngfuncs.Con_Printf("new: %.2f %.2f %.2f\n", v_angles.x, v_angles.y, v_angles.z);
 
 //	v_cl_angles = pparams->cl_viewangles;	// keep old user mouse angles !
 	if ( CL_IsThirdPerson() )
@@ -1627,6 +1625,8 @@ void DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 	else if ( !pparams->paused )
 	{
 		V_CalcNormalRefdef ( pparams );
+		v_oldframenum = v_framenum;
+		v_framenum++;
 	}
 
 /*
@@ -1701,6 +1701,8 @@ void V_Init (void)
 
 	cl_rollspeed		= gEngfuncs.pfnRegisterVariable( "cl_rollspeed", "200", 0);
 	cl_rollangle		= gEngfuncs.pfnRegisterVariable( "cl_rollangle", "2.0", 0);
+
+	v_framenum = v_oldframenum = 0;
 }
 
 

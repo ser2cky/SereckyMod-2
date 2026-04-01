@@ -57,7 +57,6 @@ private:
 	cvar_t*		m_pCvarDecals;
 	cvar_t*		m_pCvarTracerSpeed;
 	cvar_t*		m_pCvarTracerOffset;
-	unsigned short*		host_basepal;
 
 	// Muzzle flash sprites
 	model_t*	cl_sprite_muzzleflash[3];

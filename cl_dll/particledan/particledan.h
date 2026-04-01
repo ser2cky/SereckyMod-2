@@ -4,28 +4,18 @@
 #pragma once
 #endif
 
-#define	MAX_PARTICLES	8192
-#define	MAX_EMITTERS	800
-
-typedef vec_t vec2_t[2];
-
-enum
-{
-	INCREASING = 1,
-	DECREASING = -1
-};
+#define	MAX_PARTICLES	4096
+#define	MAX_EMITTERS	500
 
 //===============================
-//	Collision behavior for particles.
+//	Collision Flags
 //===============================
 
-typedef enum
-{
-	DONT_COLLIDE = 0,
-	COLLIDE_STICK = 1,
-	COLLIDE_DIE = 2,
-	COLLIDE_BOUNCE = 3
-} collide_type_t;
+#define COLLIDE_STICK				( 1 << 0 ) // Stick to surfaces.
+#define COLLIDE_BOUNCE				( 1 << 1 ) // Bounce off surfaces.
+#define COLLIDE_SLIDE				( 1 << 2 ) // Slide off surfaces.
+#define COLLIDE_AND_DIE				( 1 << 3 ) // Hit something and die right away.
+#define COLLIDE_AGAINST_PLAYERS		( 1 << 4 ) // Does what it says.
 
 //===============================
 //	Animation behavior for particles.
@@ -69,8 +59,30 @@ typedef struct emitter_s
 	int		max_emit_frame;		// How much an emitter can emit during a frame
 	float	emit_freq;			// How frequently an emitter can emit particles
 
-	collide_type_t	collide_mode;	// Emitter collision behavior.
+	unsigned int col_flags;		// How Emitters interact with the world.
+
+	struct emitter_s* next;
 } emitter_t;
+
+//===============================
+//	Color Ramps
+//	For those who miss using color ramps from
+//	good ol' QParticles.
+//===============================
+
+struct color_ramp_s
+{
+	int			size;			// How many colors our given ramp has.
+	color24		colors[10];		// Array where you can define your own colors.
+};
+
+struct anim_info_s
+{
+	unsigned int	frame;
+	float			alpha;
+	Vector2D		scale;
+	vec3_t			color;
+};
 
 //===============================
 //	Particle struct.
@@ -78,6 +90,10 @@ typedef struct emitter_s
 
 typedef struct partdan_s
 {
+	//
+	// Variables that users can freely modify.
+	//
+
 	// Movement
 	vec3_t	org;		// Particle's origin
 	vec3_t	vel;		// Particle's velocity
@@ -89,48 +105,41 @@ typedef struct partdan_s
 	float	bounce;		// Particle's bouncefactor
 
 	// Appearence
-	const char		*sprite;	// Particle sprite name
-	unsigned int	rendermode;	// Particle's rendermode
-	float			brightness;	// Particle's brightness for TriAPI
-
-	vec3_t			color;			// Particle's current color
-	vec3_t			color_start;	// Particle's starting color
-	vec3_t			color_end;		// Particle's ending color
-	vec3_t			color_step;		// Particle color rate of change
+	const char		*sprite;		// Particle sprite name
+	unsigned int	rendermode;		// Particle's rendermode
+	float			brightness;		// Particle's brightness for TriAPI
 
 	// Animation
-	unsigned int	frame;			// Particle's current frame
-	unsigned int	frame_start;	// Particle's starting frame
-	unsigned int	frame_end;		// Particle's ending frame
+	struct anim_info_s		cur;	// Current frame, alpha, scale, and color.
+	struct anim_info_s		start;	// start frame, alpha, scale, and color.
+	struct anim_info_s		end;	// Ending frame, alpha, scale, and color.
+
+	vec3_t			color_step;		// Particle color rate of change
 	unsigned int	framerate;		// Particle's framerate
-
-	float			alpha;			// Particle's current alpha
-	float			alpha_start;	// Particle's starting transparency
-	float			alpha_end;		// Particle's ending transparency
 	float			alpha_step;		// Particle transparency rate of change
-
-	Vector2D		scale;			// Particle's size
-	Vector2D		scale_start;	// Particle's starting size
-	Vector2D		scale_end;		// Particle's ending size
 	Vector2D		scale_step;		// Particle's size rate of change
 
 	// Behavior
-	unsigned int	idx;		// Entity that particle is tied to
-	float			ltime;		// Particle's lifetime
+	unsigned int	idx;			// Entity that particle is tied to
+	float			ltime;			// Particle's lifetime
 
-	collide_type_t	collide_think;	// Particle's collision behavior
+	unsigned int	col_flags;		// How Particles interact with the world.
 	anim_think_t	anim_think;		// Particle's animation behavior
 	anim_think_t	alpha_think;	// Particle's transparency behavior
 	anim_think_t	scale_think;	// Particle's scaling behavior
 	anim_think_t	color_think;	// Particle's color thinking behavior
 	light_think_t	light_think;	// Particle's light-level behavior
 
-	// Logic - don't touch!!
-	vec3_t	old_org;				// old org - used for bouncing
+	//
+	// Variables that only the code can modify.
+	//
 
-	float	nextanim;				// Particle's animation thinker
-	struct	model_s		*model;		// Particle's model pointer
-	struct	partdan_s	*next;		// pointer to next particle in particle pointer pool
+	vec3_t		old_org;			// old org - used for bouncing
+
+	float		timestart;			// when were we first created?
+	float		nextanim;			// Particle's animation thinker
+	struct		model_s		*model;	// Particle's model pointer
+	struct		partdan_s	*next;	// pointer to next particle in particle pointer pool
 } ParticleDan;
 
 class CParticleDan
@@ -142,9 +151,9 @@ public:
 
 	vec3_t		RGBToColor4f( float r, float g, float b );
 	void		SetColor( ParticleDan* p, vec3_t start, vec3_t end, vec3_t step, anim_think_t mode = DO_NOTHING );
-	void		SetScale( ParticleDan* p, Vector2D start, Vector2D end, Vector2D step, anim_think_t mode = DO_NOTHING ); // start scale, end scale, step, scale mode
-	void		SetFade( ParticleDan* p, float start, float end, float step, anim_think_t mode = DO_NOTHING ); // start alpha, end alpha, step, fade mode
-	void		SetAnimate( ParticleDan* p, int start, int end, int framerate, anim_think_t mode = DO_NOTHING ); // start frame, end frame, animation mode
+	void		SetScale( ParticleDan* p, Vector2D start, Vector2D end, Vector2D step, anim_think_t mode = DO_NOTHING );
+	void		SetAlpha( ParticleDan* p, float start, float end, float step, anim_think_t mode = DO_NOTHING );
+	void		SetAnimate( ParticleDan* p, int start, int end, int framerate, anim_think_t mode = DO_NOTHING );
 
 	int			Init( void );
 	int			VidInit(void);
@@ -161,8 +170,6 @@ private:
 
 	cvar_t*		m_pCvarTestParticles;
 	void		CreateTestParticles( void );
-	int			m_iShownYet;
-	float		m_flEmissionRate;
 };
 
 extern CParticleDan gParticleDan;
