@@ -301,7 +301,7 @@
     <ClCompile Include="hud_triapi.cpp">
       <Filter>Source Files\Hud</Filter>
     </ClCompile>
-    <ClCompile Include="particledan\particledan3.cpp">
+    <ClCompile Include="particledan\particledan.cpp">
       <Filter>Source Files\ParticleDan</Filter>
     </ClCompile>
     <ClCompile Include="hud_drawfont.cpp">

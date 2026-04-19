@@ -19,7 +19,7 @@
 #include "pm_defs.h"
 #include "pmtrace.h"	
 #include "pm_shared.h"
-#include "cl_hl_tent.h"
+#include "tempentity.h"
 
 #define DLLEXPORT __declspec( dllexport )
 

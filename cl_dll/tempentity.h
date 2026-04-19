@@ -6,27 +6,31 @@
 
 typedef struct tempent_s	TEMPENTITY;
 typedef struct model_s		model_t;
+typedef struct beam_s		BEAM;
 
+// the purest form of "c with classes" you've seen yet
 class CTempEntities
 {
 public:
 	void	Init( void );
 	void	VidInit( void );
-	void	Shutdown( void );
 	int		MsgFunc_ParseTEnt( const char* pszName, int iSize, void* pbuf );
 
-	// Tracers
+	// Tracers.
 	void	R_TracerEffect( vec_t* start, vec_t* end );
 	void	R_Implosion( vec_t* end, float radius, int count, float life );
 	void	R_StreakSplash( vec_t* pos, vec_t* dir, int color, int count, float speed, int velocityMin, int velocityMax );
+	void	R_SparkStreaks( vec_t* pos, int count, int velocityMin, int velocityMax );
 
-	// QParticles
+	// Particles.
 	void	R_ParticleExplosion( vec_t* org );
 	void	R_ParticleExplosion2( vec_t* org, int colorStart, int colorLength );
 	void	R_BlobExplosion( vec_t* org );
 	void	R_RunParticleEffect( vec_t* org, vec_t* dir, int color, int count );
+	void	R_BulletImpactParticles( vec_t* org );
 	void	R_FlickerParticles( vec_t* org );
 	void	R_LavaSplash( vec_t* org );
+	void	R_ParticleBurst( vec_t* org, int size, int color, float life );
 	void	R_LargeFunnel( vec_t* org, int reverse );
 	void	R_TeleportSplash( vec_t* org );
 	void	R_ShowLine( vec_t* start, vec_t* end );
@@ -34,7 +38,17 @@ public:
 	void	R_Blood( vec_t* org, vec_t* dir, int pcolor, int speed );
 	void	R_RocketTrail( vec_t *start, vec_t *end, int type );
 
-	// Temp Ents.
+	// Beams.
+	void	R_BeamSetup( BEAM* pbeam, vec_t* start, vec_t* end, int modelIndex, float life, float width, float amplitude, float brightness, float speed );
+	void	SetBeamAttributes(BEAM* pbeam, float r, float g, float b, float framerate, int startFrame);
+	BEAM*	R_BeamEnts( int startEnt, int endEnt, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b );
+	BEAM*	R_BeamEntPoint( int startEnt, vec_t* end, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b );
+	BEAM*	R_BeamCirclePoints( int type, vec_t* start, vec_t* end, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b );
+	BEAM*	R_BeamFollow( int startEnt, int modelIndex, float life, float width, float r, float g, float b, float brightness );
+	BEAM*	R_BeamRing( int startEnt, int endEnt, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b );
+
+	// Temporary entities.
+	void	R_RicochetSound(vec_t* pos);
 	void	R_FizzEffect( cl_entity_t* pent, int modelIndex, int density );
 	void	R_Bubbles( vec_t* mins, vec_t* maxs, float height, int modelIndex, int count, float speed );
 	void	R_BubbleTrail( vec_t* start, vec_t* end, float height, int modelIndex, int count, float speed );
@@ -43,6 +57,7 @@ public:
 	void	R_BreakModel( float* pos, float* size, float* dir, float random, float life, int count, int modelIndex, char flags );
 	TEMPENTITY*		R_TempSprite( float* pos, float* dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags );
 	void	R_Sprite_Spray( vec_t* pos, vec_t* dir, int modelIndex, int count, int speed, int iRand );
+	void	R_Spray( vec_t* pos, vec_t* dir, int modelIndex, int count, int speed, int iRand, int rendermode );
 	void	R_SparkEffect( float* pos, int count, int velocityMin, int velocityMax );
 	void	R_FunnelSprite( float* org, int modelIndex, int reverse );
 	void	R_RicochetSprite( float* pos, model_t* pmodel, float duration, float scale );
@@ -50,6 +65,9 @@ public:
 	TEMPENTITY*		R_DefaultSprite( float* pos, int spriteIndex, float framerate );
 	void	R_Sprite_Smoke( TEMPENTITY* pTemp, float scale );
 	void	R_Sprite_Explode( TEMPENTITY* pTemp, float scale, int flags );
+	void	R_PlayerSprites( int client, int modelIndex, int count, int size );
+	void	R_FireField( float *org, int radius, int modelIndex, int count, int flags, float life );
+	void	R_MultiGunshot( vec_t* org, vec_t* dir, vec_t* noise, int count, int decalCount, int *decalIndices );
 	void	R_Sprite_WallPuff( TEMPENTITY* pTemp, float scale );
 	void	R_MuzzleFlash( float* pos1, int type );
 private:

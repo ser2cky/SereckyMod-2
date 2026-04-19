@@ -118,7 +118,6 @@ cvar_t	v_iroll_level		= {"v_iroll_level", "0.1", 0, 0.1};
 cvar_t	v_ipitch_level		= {"v_ipitch_level", "0.3", 0, 0.3};
 
 float	v_idlescale;  // used by TFC for concussion grenade effect
-int		v_framenum, v_oldframenum;
 
 //=============================================================================
 /*
@@ -1625,8 +1624,6 @@ void DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 	else if ( !pparams->paused )
 	{
 		V_CalcNormalRefdef ( pparams );
-		v_oldframenum = v_framenum;
-		v_framenum++;
 	}
 
 /*
@@ -1701,8 +1698,6 @@ void V_Init (void)
 
 	cl_rollspeed		= gEngfuncs.pfnRegisterVariable( "cl_rollspeed", "200", 0);
 	cl_rollangle		= gEngfuncs.pfnRegisterVariable( "cl_rollangle", "2.0", 0);
-
-	v_framenum = v_oldframenum = 0;
 }
 
 

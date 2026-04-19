@@ -13,44 +13,23 @@
       <UniqueIdentifier>{10f305af-50fe-469a-963b-6ed958bb1885}</UniqueIdentifier>
       <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe</Extensions>
     </Filter>
-    <Filter Include="Source Files\Entities">
-      <UniqueIdentifier>{1ef0e669-cbf9-4960-abdf-7d1620b99b42}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Entities\CBase">
-      <UniqueIdentifier>{19c7605a-4eb9-49e0-bec0-7dd415e3ff5e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Client">
-      <UniqueIdentifier>{5dbb299a-96f9-4635-83da-7dc79d51c4ec}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\PMove">
       <UniqueIdentifier>{5ed69051-d083-4b5c-bab9-a89367edad0d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Weapons">
       <UniqueIdentifier>{63fa4714-4486-48cc-bdfa-000d316b4550}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Entities\Monsters">
-      <UniqueIdentifier>{792612fa-eb30-4b95-bf91-b3408ef9c73e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Entities\Map">
-      <UniqueIdentifier>{0b8d7daf-3b70-491f-8ae7-6961e2dabd1a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Items">
       <UniqueIdentifier>{55596f7e-b705-487d-a4b8-4bb2f0160258}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Entities\Animation">
-      <UniqueIdentifier>{1977e577-c5cb-4a99-8615-f9d5675b784b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Entities\Ai">
-      <UniqueIdentifier>{0bf260d3-f007-4d75-bf8a-5fc437c46615}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\GameRules">
       <UniqueIdentifier>{1c8bd119-4600-4667-a101-f004c7688355}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Sound">
-      <UniqueIdentifier>{1d631aa8-ef20-4e9f-a993-39b3b074eba6}</UniqueIdentifier>
+    <Filter Include="Source Files\Monsters">
+      <UniqueIdentifier>{792612fa-eb30-4b95-bf91-b3408ef9c73e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\HL_DLL">
-      <UniqueIdentifier>{e982d1ac-0dcd-419d-afa3-7b9519bf5109}</UniqueIdentifier>
+    <Filter Include="Source Files\Map">
+      <UniqueIdentifier>{0b8d7daf-3b70-491f-8ae7-6961e2dabd1a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -64,139 +43,112 @@
       <Filter>Source Files\Weapons</Filter>
     </ClCompile>
     <ClCompile Include="m_aflock.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_agrunt.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="airtank.cpp">
       <Filter>Source Files\Items</Filter>
     </ClCompile>
-    <ClCompile Include="animating.cpp">
-      <Filter>Source Files\Entities\Animation</Filter>
-    </ClCompile>
-    <ClCompile Include="animation.cpp">
-      <Filter>Source Files\Entities\Animation</Filter>
-    </ClCompile>
     <ClCompile Include="m_apache.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_barnacle.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_barney.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_bigmomma.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_bloater.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="bmodels.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="m_bullsquid.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="buttons.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
-    </ClCompile>
-    <ClCompile Include="cbase.cpp">
-      <Filter>Source Files\Entities\CBase</Filter>
-    </ClCompile>
-    <ClCompile Include="client.cpp">
-      <Filter>Source Files\Client</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="m_controller.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
-    </ClCompile>
-    <ClCompile Include="defaultai.cpp">
-      <Filter>Source Files\Entities\Ai</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="doors.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="effects.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="explode.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="m_flyingmonster.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="func_break.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="func_tank.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
-    </ClCompile>
-    <ClCompile Include="game.cpp">
-      <Filter>Source Files\HL_DLL</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="m_gargantua.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_genericmonster.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
-    </ClCompile>
-    <ClCompile Include="globals.cpp">
-      <Filter>Source Files\HL_DLL</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_gman.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
-    </ClCompile>
-    <ClCompile Include="h_ai.cpp">
-      <Filter>Source Files\Entities\Ai</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="h_battery.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="m_h_cine.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_h_cycler.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
-    </ClCompile>
-    <ClCompile Include="h_export.cpp">
-      <Filter>Source Files\HL_DLL</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_hassassin.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_zombie.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_headcrab.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_hgrunt.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_hornet.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_houndeye.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_ichthyosaur.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_islave.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_leech.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_scientist.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_rat.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_roach.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="..\pm_shared\pm_shared.c">
       <Filter>Source Files\PMove</Filter>
@@ -208,7 +160,7 @@
       <Filter>Source Files\PMove</Filter>
     </ClCompile>
     <ClCompile Include="m_tempmonster.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="healthkit.cpp">
       <Filter>Source Files\Items</Filter>
@@ -217,37 +169,13 @@
       <Filter>Source Files\Items</Filter>
     </ClCompile>
     <ClCompile Include="lights.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
-    </ClCompile>
-    <ClCompile Include="monsterstate.cpp">
-      <Filter>Source Files\Entities\CBase</Filter>
-    </ClCompile>
-    <ClCompile Include="monsters.cpp">
-      <Filter>Source Files\Entities\CBase</Filter>
-    </ClCompile>
-    <ClCompile Include="..\game_shared\voice_gamemgr.cpp">
-      <Filter>Source Files\Client</Filter>
-    </ClCompile>
-    <ClCompile Include="nodes.cpp">
-      <Filter>Source Files\Entities\Ai</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="mortar.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
-    </ClCompile>
-    <ClCompile Include="world.cpp">
-      <Filter>Source Files\HL_DLL</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="xen.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
-    </ClCompile>
-    <ClCompile Include="subs.cpp">
-      <Filter>Source Files\HL_DLL</Filter>
-    </ClCompile>
-    <ClCompile Include="schedule.cpp">
-      <Filter>Source Files\Entities\Ai</Filter>
-    </ClCompile>
-    <ClCompile Include="util.cpp">
-      <Filter>Source Files\HL_DLL</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="multiplay_gamerules.cpp">
       <Filter>Source Files\GameRules</Filter>
@@ -259,55 +187,40 @@
       <Filter>Source Files\GameRules</Filter>
     </ClCompile>
     <ClCompile Include="m_turret.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="triggers.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="monstermaker.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="pathcorner.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="plane.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="plats.cpp">
-      <Filter>Source Files\Entities\Map</Filter>
-    </ClCompile>
-    <ClCompile Include="scripted.cpp">
-      <Filter>Source Files\Entities\Ai</Filter>
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="m_nihilanth.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_osprey.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_tentacle.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_talkmonster.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="m_squadmonster.cpp">
-      <Filter>Source Files\Entities\Monsters</Filter>
-    </ClCompile>
-    <ClCompile Include="player.cpp">
-      <Filter>Source Files\Client</Filter>
+      <Filter>Source Files\Monsters</Filter>
     </ClCompile>
     <ClCompile Include="skill.cpp">
       <Filter>Source Files\GameRules</Filter>
-    </ClCompile>
-    <ClCompile Include="spectator.cpp">
-      <Filter>Source Files\Client</Filter>
-    </ClCompile>
-    <ClCompile Include="sound.cpp">
-      <Filter>Source Files\Sound</Filter>
-    </ClCompile>
-    <ClCompile Include="soundent.cpp">
-      <Filter>Source Files\Sound</Filter>
     </ClCompile>
     <ClCompile Include="gamerules.cpp">
       <Filter>Source Files\GameRules</Filter>
@@ -360,8 +273,77 @@
     <ClCompile Include="weapon_shared.cpp">
       <Filter>Source Files\Weapons</Filter>
     </ClCompile>
+    <ClCompile Include="client.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="player.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="spectator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="usermsg.cpp">
-      <Filter>Source Files\Client</Filter>
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\game_shared\voice_gamemgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="defaultai.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="h_ai.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nodes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="schedule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scripted.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animating.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="globals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="h_export.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="subs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sound.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="soundent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cbase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="monsters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="monsterstate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="serecky_vehicle.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

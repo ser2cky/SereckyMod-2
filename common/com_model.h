@@ -219,6 +219,17 @@ typedef struct hull_s
 	vec3_t		clip_maxs;
 } hull_t;
 
+typedef struct lumpinfo_s
+{
+	int			filepos;
+	int			disksize;
+	int			size;					// uncompressed
+	char		type;
+	char		compression;
+	char		pad1, pad2;
+	char		name[16];				// must be null terminated
+} lumpinfo_t;
+
 #if !defined( CACHE_USER ) && !defined( QUAKEDEF_H )
 #define CACHE_USER
 typedef struct cache_user_s
@@ -226,6 +237,35 @@ typedef struct cache_user_s
 	void	*data;
 } cache_user_t;
 #endif
+
+typedef struct
+{
+	char			name[64];
+	cache_user_t	cache;
+} cachepic_t;
+
+typedef struct
+{
+	char			name[64];
+	cache_user_t	cache;
+} cacheentry_t;
+
+typedef struct cachewad_s cachewad_t;
+
+typedef void (*PFNCACHE)(cachewad_t*, byte*);
+
+typedef struct cachewad_s
+{
+	char* name;
+	cachepic_t* cache;
+
+	int				cacheCount;
+	int				cacheMax;
+	lumpinfo_t* lumps;
+	int				lumpCount;
+	int				cacheExtra;
+	PFNCACHE		pfnCacheBuild;
+} cachewad_t;
 
 typedef struct model_s
 {

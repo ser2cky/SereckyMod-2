@@ -1,0 +1,38 @@
+To create particle definitions using the ParticleDan system, you must create a .cfg 
+inside the "particledef" folder of your mod directory. Your .cfg file may contain
+as multiple particle definitions, but keep in mind that users can only define up to 
+256 particles.
+
+Particle definition syntax:
+
+particle_name_here
+{
+	sprite sprites/kp_explode1
+	type normal
+	ltime 1.0
+	scale "0 0" "128 128" once
+	scale_step "128 128"
+	alpha "1.0 1.0" "0.0 0.0"
+	alpha_step "-8.0 -8.0"
+	collide bounce
+	fwdvel 1000
+	vel_noise "-96 96"
+}
+
+Valid ParticleDef fields...
+
+
+sprite "path/to/your/sprite"
+Applies a sprite to the particle.
+
+Animation fields.
+
+frame <start> <end> <mode>
+Sets the sprite's starting and ending frame. See !modes! section for more
+information about available animation modes.
+
+fps <0-x>
+Sets your sprite's frame-rate.
+
+Started
+APR-1-26

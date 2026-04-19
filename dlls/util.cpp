@@ -1304,7 +1304,7 @@ void UTIL_PlayerDecalTrace( TraceResult *pTrace, int playernum, int decalNumber,
 	if (pTrace->flFraction == 1.0)
 		return;
 
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+	MESSAGE_BEGIN( MSG_BROADCAST, gmsgTempEntity );
 		WRITE_BYTE( TE_PLAYERDECAL );
 		WRITE_BYTE ( playernum );
 		WRITE_COORD( pTrace->vecEndPos.x );

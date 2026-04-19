@@ -32,7 +32,7 @@
 #include "vgui_scorepanel.h"
 #include "particledan/particledan.h"
 #include "hlfont.h"
-#include "cl_hl_tent.h"
+#include "tempentity.h"
 
 // SERECKY JAN-21-26: hud scaling start
 extern model_s *gpSprite;
@@ -383,8 +383,6 @@ CHud :: ~CHud()
 		}
 		m_pHudList = NULL;
 	}
-
-	gTempEnt.Shutdown();
 	ServersShutdown();
 }
 

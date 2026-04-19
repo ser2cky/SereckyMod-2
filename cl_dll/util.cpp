@@ -47,6 +47,35 @@ float Length(const float *v)
 	return length;
 }
 
+void _CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross)
+{
+	cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
+	cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
+	cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
+}
+
+void VectorMatrix( float* forward, float* right, float* up )
+{
+	vec3_t tmp;
+
+	if (forward[0] == 0 && forward[1] == 0)
+	{
+		right[0] = 1;
+		right[1] = 0;
+		right[2] = 0;
+		up[0] = -forward[2];
+		up[1] = 0;
+		up[2] = 0;
+		return;
+	}
+
+	tmp[0] = 0; tmp[1] = 0; tmp[2] = 1;
+	_CrossProduct(forward, tmp, right);
+	VectorNormalize(right);
+	_CrossProduct(right, forward, up);
+	VectorNormalize(up);
+}
+
 void VectorAngles( const float *forward, float *angles )
 {
 	float	tmp, yaw, pitch;

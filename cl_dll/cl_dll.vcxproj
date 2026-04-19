@@ -188,7 +188,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="parsemsg.cpp" />
-    <ClCompile Include="particledan\particledan3.cpp" />
+    <ClCompile Include="particledan\particledan.cpp" />
     <ClCompile Include="saytext.cpp" />
     <ClCompile Include="statusbar.cpp" />
     <ClCompile Include="status_icons.cpp" />

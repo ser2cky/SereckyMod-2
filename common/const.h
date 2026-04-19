@@ -158,7 +158,8 @@
 #define TE_EXPLFLAG_NODLIGHTS	2	// do not render dynamic lights
 #define TE_EXPLFLAG_NOSOUND		4	// do not play client explosion sound
 #define TE_EXPLFLAG_NOPARTICLES	8	// do not draw particles
-
+#define TE_EXPLFLAG_DRAWALPHA	16	// sprite will be drawn alpha
+#define TE_EXPLFLAG_ROTATE		32	// rotate the sprite randomly
 
 #define	TE_TAREXPLOSION		4		// Quake1 "tarbaby" explosion with sound
 // coord coord coord (position) 
@@ -520,6 +521,7 @@
 #define TEFIRE_FLAG_LOOP		4 // if set, sprite plays at 15 fps, otherwise plays at whatever rate stretches the animation over the sprite's duration.
 #define TEFIRE_FLAG_ALPHA		8 // if set, sprite is rendered alpha blended at 50% else, opaque
 #define TEFIRE_FLAG_PLANAR		16 // if set, all fire sprites have same initial Z instead of randomly filling a cube. 
+#define TEFIRE_FLAG_ADDITIVE	32 // if set, sprite is rendered as additive
 
 #define TE_PLAYERATTACHMENT			124 // attaches a TENT to a player (this is a high-priority tent)
 // byte (entity index of player)

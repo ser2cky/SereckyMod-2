@@ -241,6 +241,7 @@
     <ClCompile Include="schedule.cpp" />
     <ClCompile Include="m_scientist.cpp" />
     <ClCompile Include="scripted.cpp" />
+    <ClCompile Include="serecky_vehicle.cpp" />
     <ClCompile Include="singleplay_gamerules.cpp" />
     <ClCompile Include="skill.cpp" />
     <ClCompile Include="sound.cpp" />

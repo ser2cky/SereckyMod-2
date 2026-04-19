@@ -34,7 +34,7 @@
 
 #include "r_studioint.h"
 #include "com_model.h"
-#include "cl_hl_tent.h"
+#include "tempentity.h"
 
 extern engine_studio_api_t IEngineStudio;
 
