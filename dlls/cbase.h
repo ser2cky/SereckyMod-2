@@ -338,6 +338,9 @@ public:
 	virtual	BOOL FVisible ( CBaseEntity *pEntity );
 	virtual	BOOL FVisible ( const Vector &vecOrigin );
 
+	// SERECKY APR-19-26: For entities that have to send extra information to the client
+	virtual void SendClientInfo( CBaseEntity* pEntity = NULL ) {};
+
 	//We use this variables to store each ammo count.
 	int ammo_9mm;
 	int ammo_357;

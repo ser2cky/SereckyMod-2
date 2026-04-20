@@ -16,7 +16,9 @@
 #include "entity_state.h"
 #include "cl_entity.h"
 #include "triangleapi.h"
+
 #include "particledan/particledan.h"
+#include "lightworld.h"
 
 #define DLLEXPORT __declspec( dllexport )
 
@@ -118,7 +120,8 @@ Render any triangles with transparent rendermode needs here
 */
 void DLLEXPORT HUD_DrawTransparentTriangles( void )
 {
-	gParticleDan.ManageParticles();
+	gPDan.ManageParticleDan();
+	gLightWorld.ManageLights();
 #if defined( TEST_IT )
 //	Draw_Triangles();
 #endif

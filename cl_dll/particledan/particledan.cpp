@@ -46,9 +46,10 @@
 #include "../parsemsg.h"
 #include "pm_defs.h"
 #include "particledan.h"
+#include "../in_defs.h"
 
 extern engine_studio_api_t IEngineStudio;
-CParticleDan	gParticleDan;
+CParticleDan	gPDan;
 
 //=========================================================
 //	Init
@@ -134,23 +135,22 @@ ParticleDan *CParticleDan::GetParticlePointer( void )
 }
 
 //=========================================================
-//	ManageParticles
+//	ManageParticleDan
 // 
-//	Function to manage particles and update the active and free particles
-//	list. Credits to Quake2 for coming up with a really simple way of managing
-//	particles, and being open source. It's ripe for the picking after all ;)
+//	Function to manage both emitters and particles.
 //=========================================================
 
-void CParticleDan::ManageParticles( void )
+void CParticleDan::ManageParticleDan( void )
 {
-	ParticleDan *p, *next, *tail, *active;
+	ParticleDan		*p, *pNext, *pTail, *pActive;
+	PDan_Emitter	*emitter, *pEmitterNext, *pEmitterTail, *pEmitterActive;
 
-	active = NULL;
-	tail = NULL;
+	pActive = NULL;
+	pTail = NULL;
 
-	for ( p = m_ActiveParticles; p; p = next )
+	for ( p = m_ActiveParticles; p; p = pNext )
 	{
-		next = p->next;
+		pNext = p->next;
 
 		if ( p->ltime <= 0.0f )
 		{
@@ -162,14 +162,14 @@ void CParticleDan::ManageParticles( void )
 
 		p->next = NULL;
 
-		if ( !tail )
+		if ( !pTail )
 		{
-			active = tail = p;
+			pActive = pTail = p;
 		}
 		else
 		{
-			tail->next = p;
-			tail = p;
+			pTail->next = p;
+			pTail = p;
 		}
 
 		if ( p->think == NULL )
@@ -185,7 +185,36 @@ void CParticleDan::ManageParticles( void )
 		ParticleDraw( p );
 	}
 
-	m_ActiveParticles = active;
+	m_ActiveParticles = pActive;
+
+	pEmitterActive = NULL;
+	pEmitterTail = NULL;
+
+	for ( emitter = m_ActiveEmitters; emitter; emitter = pEmitterNext )
+	{
+		pEmitterNext = emitter->next;
+
+		if ( emitter->ltime )
+		{
+			emitter->next = m_FreeEmitters;
+			m_FreeEmitters = emitter;
+			continue;
+		}
+
+		emitter->next = NULL;
+
+		if ( !pEmitterTail )
+		{
+			pEmitterActive = pEmitterTail = emitter;
+		}
+		else
+		{
+			pEmitterTail->next = emitter;
+			pEmitterTail = emitter;
+		}
+	}
+
+	m_ActiveEmitters = pEmitterActive;
 
 	if (m_pCvarTestParticles->value)
 		CreateTestParticles();
@@ -546,6 +575,8 @@ void CParticleDan::ParticleDraw( ParticleDan* p )
 
 	// Setup AngleVector doohickey,
 	gEngfuncs.GetViewAngles( ( float* )v_angles );
+	v_angles[ROLL] += p->angles;
+
 	AngleVectors( v_angles, NULL, right, up );
 
 	// Transform sprite.
@@ -724,7 +755,7 @@ void ShootFlameThrower(void)
 
 			gEngfuncs.Con_Printf("%.2f %.2f frac %f\n", last_fire_time, fire_time, lerpfrac);
 
-			if ((p = gParticleDan.GetParticlePointer()) != NULL)
+			if ((p = gPDan.GetParticlePointer()) != NULL)
 			{
 				for ( i = 0; i < 3; i++ )
 				{
@@ -741,11 +772,12 @@ void ShootFlameThrower(void)
 				p->sprite = "sprites/kp_explode1.spr";
 				p->rendermode = kRenderTransAdd;
 				p->brightness = 1.0f;
+				p->angles = gEngfuncs.pfnRandomFloat(-360.0f, 360.0f);
 
-				gParticleDan.SetColor(p, gParticleDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
-				gParticleDan.SetScale(p, { 2.0f, 2.0f }, { 128.0f, 128.0f }, { 128.0f, 128.0f }, ANIMATE_ONCE);
-				gParticleDan.SetAlpha(p, 1.0f, 0.0f, -8.0f);
-				gParticleDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
+				gPDan.SetColor(p, gPDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
+				gPDan.SetScale(p, { 1.0f, 1.0f }, { 128.0f, 128.0f }, { 128.0f, 128.0f }, ANIMATE_ONCE);
+				gPDan.SetAlpha(p, 1.0f, 0.0f, -8.0f);
+				gPDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
 
 				p->ltime = 2.0f;
 				p->col_flags = COLLIDE_SLIDE;
@@ -757,7 +789,7 @@ void ShootFlameThrower(void)
 	}
 	else
 	{
-		if ( ( p = gParticleDan.GetParticlePointer() ) != NULL )
+		if ( ( p = gPDan.GetParticlePointer() ) != NULL )
 		{
 			p->org = cur_org;
 			p->vel = cur_fwd * 1000.0f + cur_rt * gEngfuncs.pfnRandomFloat( -FLAME_NOISE, FLAME_NOISE ) + cur_up * gEngfuncs.pfnRandomFloat( -FLAME_NOISE, FLAME_NOISE );
@@ -767,10 +799,10 @@ void ShootFlameThrower(void)
 			p->rendermode = kRenderTransAdd;
 			p->brightness = 1.0f;
 
-			gParticleDan.SetColor(p, gParticleDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
-			gParticleDan.SetScale(p, { 2, 2 }, { 128.0f, 128.0f }, { 128.0f, 128.0f }, ANIMATE_ONCE);
-			gParticleDan.SetAlpha(p, 1.0f, 0.0f, -8.0f);
-			gParticleDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
+			gPDan.SetColor(p, gPDan.RGBToColor4f(255, 255, 255), vec3_origin, vec3_origin);
+			gPDan.SetScale(p, { 2, 2 }, { 128.0f, 128.0f }, { 128.0f, 128.0f }, ANIMATE_ONCE);
+			gPDan.SetAlpha(p, 1.0f, 0.0f, -8.0f);
+			gPDan.SetAnimate(p, 0, 12, 30, ANIMATE_DIE);
 
 			p->ltime = 2.0f;
 			p->col_flags = COLLIDE_SLIDE;

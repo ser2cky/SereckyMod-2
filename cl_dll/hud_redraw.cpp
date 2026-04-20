@@ -21,6 +21,7 @@
 #include "r_studioint.h"
 #include "vgui_TeamFortressViewport.h"
 #include "hlfont.h"
+#include "lightworld.h"
 
 #define MAX_LOGO_FRAMES 56
 
@@ -141,7 +142,9 @@ void CHud::Think(void)
 // Redraw
 // step through the local data,  placing the appropriate graphics & text as appropriate
 // returns 1 if they've changed, 0 otherwise
+
 extern void DrawTest(void);
+
 int CHud :: Redraw( float flTime, int intermission )
 {
 	m_fOldTime = m_flTime;	// save time of previous redraw
@@ -150,6 +153,7 @@ int CHud :: Redraw( float flTime, int intermission )
 	static float m_flShotTime = 0;
 	
 	DrawTest();
+	gLightWorld.DrawLightInfo(NULL);
 
 	// Clock was reset, reset delta
 	if ( m_flTimeDelta < 0 )

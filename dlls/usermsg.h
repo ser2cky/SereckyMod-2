@@ -59,6 +59,7 @@ extern int gmsgTeamNames;
 extern int gmsgStatusText;
 extern int gmsgStatusValue;
 extern int gmsgTempEntity;
+extern int gmsgLight;
 
 void LinkUserMessages(void);
 

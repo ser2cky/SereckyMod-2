@@ -110,6 +110,12 @@
 #define EF_LIGHT				64	// rocket flare glow sprite
 #define EF_NODRAW				128	// don't draw entity
 
+// SERECKY APR-19-26: effects for the CLightWorld system.
+#define EF_EMIT_FLARE			256
+#define EF_EMIT_ELIGHT			512
+#define EF_EMIT_DLIGHT			1024
+#define EF_EMIT_SUNFLARE		2048
+
 // entity flags
 #define EFLAG_SLERP				1	// do studio interpolation of this entity
 		
@@ -709,7 +715,6 @@ enum
 	kRenderFxGlowShell,			// Glowing Shell
 	kRenderFxClampMinScale,		// Keep this sprite from getting very small (SPRITES only!)
 };
-
 
 typedef int	func_t;
 typedef int	string_t;

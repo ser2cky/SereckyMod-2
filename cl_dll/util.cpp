@@ -25,6 +25,7 @@
 #include "hud.h"
 #include "cl_util.h"
 #include <string.h>
+#include <stdarg.h>
 
 #ifndef M_PI
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
@@ -160,3 +161,14 @@ HSPRITE LoadSprite(const char *pszName)
 	return SPR_Load(sz);
 }
 
+char* VarArgs( char *format, ... )
+{
+	va_list		argptr;
+	static char		string[1024];
+	
+	va_start (argptr, format);
+	vsprintf (string, format,argptr);
+	va_end (argptr);
+
+	return string;	
+}

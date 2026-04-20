@@ -2626,19 +2626,19 @@ int CTempEntities::MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 
 		scale = READ_BYTE() * 0.1;
 		frameRate = READ_BYTE();
-		flags = READ_BYTE();
+		flags = READ_SHORT();
 
 		if (scale != 0)
 		{
 			// sprite
 			R_Sprite_Explode(R_DefaultSprite(pos, modelindex, frameRate), scale, flags);
 
-			if (!(flags & TE_EXPLFLAG_NOPARTICLES))
+			if (flags & TE_EXPLFLAG_NOPARTICLES)
 			{
 				R_FlickerParticles(pos);
 			}
 
-			if (!(flags & TE_EXPLFLAG_NODLIGHTS))
+			if (flags & TE_EXPLFLAG_NODLIGHTS)
 			{
 				// big flash
 				dl = gEngfuncs.pEfxAPI->CL_AllocDlight(0);
@@ -2664,7 +2664,7 @@ int CTempEntities::MsgFunc_ParseTEnt(const char* pszName, int iSize, void* pbuf)
 		}
 
 		// sound
-		if (!(flags & TE_EXPLFLAG_NOSOUND))
+		if (flags & TE_EXPLFLAG_NOSOUND)
 		{
 			switch (gEngfuncs.pfnRandomLong(0, 2))
 			{

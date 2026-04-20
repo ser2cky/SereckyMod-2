@@ -440,7 +440,12 @@ extern DLL_GLOBAL int			g_Language;
 // func_pushable (it's also func_breakable, so don't collide with those flags)
 #define SF_PUSH_BREAKABLE		128
 
+// SERECKY APR-19-26: Spawnflags for the CLightWorld system.
 #define SF_LIGHT_START_OFF		1
+#define SF_LIGHT_DRAW_FLARE		2
+#define SF_LIGHT_EMIT_ELIGHT	4
+#define SF_LIGHT_EMIT_DLIGHT	8
+#define SF_LIGHT_EMIT_SUNFLARE	16
 
 #define SPAWNFLAG_NOMESSAGE	1
 #define SPAWNFLAG_NOTOUCH	1

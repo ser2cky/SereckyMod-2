@@ -33,6 +33,7 @@
 #include "particledan/particledan.h"
 #include "hlfont.h"
 #include "tempentity.h"
+#include "lightworld.h"
 
 // SERECKY JAN-21-26: hud scaling start
 extern model_s *gpSprite;
@@ -354,12 +355,15 @@ void CHud :: Init( void )
 	m_AmmoSecondary.Init();
 	m_TextMessage.Init();
 	m_StatusIcons.Init();
-	gParticleDan.Init();
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 
 	m_Menu.Init();
-	gTempEnt.Init();
+	
 	ServersInit();
+
+	gPDan.Init();
+	gTempEnt.Init();
+	gLightWorld.Init();
 
 	MsgFunc_ResetHUD(0, 0, NULL );
 }
@@ -506,9 +510,11 @@ void CHud :: VidInit( void )
 	m_AmmoSecondary.VidInit();
 	m_TextMessage.VidInit();
 	m_StatusIcons.VidInit();
-	gParticleDan.VidInit();
+
+	gPDan.VidInit();
 	gFont.VidInit();
 	gTempEnt.VidInit();
+	gLightWorld.ResetLights();
 
 	GetClientVoiceMgr()->VidInit();
 

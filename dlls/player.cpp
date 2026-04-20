@@ -3740,6 +3740,31 @@ reflecting all of the HUD state info.
 */
 void CBasePlayer :: UpdateClientData( void )
 {
+	// completely ripped off from hl-retail
+	if ( m_bHasSentToClient == FALSE )
+	{
+		edict_t* pEdict = g_engfuncs.pfnPEntityOfEntIndex(1);
+		CBaseEntity* pEntity;
+
+		for ( int i = 0; i < gpGlobals->maxEntities; pEdict++, i++ )
+		{
+			if ( pEdict->free )
+			{
+				continue;
+			}
+
+			pEntity = CBaseEntity::Instance( pEdict );
+
+			if ( pEntity == NULL )
+			{
+				break;
+			}
+
+			pEntity->SendClientInfo( this );
+		}
+		m_bHasSentToClient = TRUE;
+	}
+
 	if (m_fInitHUD)
 	{
 		m_fInitHUD = FALSE;

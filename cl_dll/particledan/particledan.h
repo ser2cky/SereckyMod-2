@@ -227,12 +227,14 @@ typedef struct emitter_s
 
 	emit_mode_t		emit_mode;		// How the emitter emits particles.
 
+	float			ltime;
+
 	//=====================================================
 	// Fields that only the code can modify.
 	//=====================================================
 
 	struct emitter_s* next;			// Pointer to the next emitter in a emitter pool.
-} emitter_t;
+} PDan_Emitter;
 
 //===============================
 //	CParticleDan Class.
@@ -242,7 +244,7 @@ class CParticleDan
 {
 public:
 	// Pointer to the classic Quake particle...
-	model_s* m_pClassicParticle;
+	model_s*	m_pClassicParticle;
 
 	//=====================================================
 	// Utility functions.
@@ -258,6 +260,8 @@ public:
 	// Basic parts of the particle's thinking routine.
 	//=====================================================
 
+	// Shared transformation function between emitters and particles.
+	void		TransformObjects( vec3_t* org, vec3_t* vel, vec3_t* angles, vec3_t avel, vec3_t accel, int col_mode );
 	void		TransformParticle( ParticleDan* p );
 	void		AnimateParticle( ParticleDan* p );
 
@@ -269,17 +273,21 @@ public:
 	int			VidInit(void);
 
 	ParticleDan*	GetParticlePointer( void );
-	void			ManageParticles( void );
+	void			ManageParticleDan( void );
 	int				MsgFunc_TieToEmitter( const char *pszName,  int iSize, void *pbuf );
 private:
 	//=====================================================
 	// Private internals
 	//=====================================================
 
-	emitter_t		m_Emitters[MAX_EMITTERS];
+	PDan_Emitter	m_Emitters[MAX_EMITTERS];
+	PDan_Emitter*	m_ActiveEmitters;
+	PDan_Emitter*	m_FreeEmitters;
+
 	ParticleDan		m_Particles[MAX_PARTICLES];
 	ParticleDan*	m_ActiveParticles;
 	ParticleDan*	m_FreeParticles;
+
 	int				m_iActiveParticles;
 
 	void		ParticleThink( ParticleDan* p );
@@ -290,6 +298,6 @@ private:
 	void		CreateTestParticles( void );
 };
 
-extern CParticleDan gParticleDan;
+extern CParticleDan gPDan;
 
 #endif
