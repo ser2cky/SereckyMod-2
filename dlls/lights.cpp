@@ -46,7 +46,6 @@ public:
 private:
 	int		m_iStyle;
 	int		m_iszPattern;
-	int		m_iClientFlags;
 };
 LINK_ENTITY_TO_CLASS( light, CLight );
 
@@ -120,11 +119,11 @@ void CLight :: KeyValue( KeyValueData* pkvd)
 
 void CLight :: Spawn( void )
 {
-	//if (FStringNull(pev->targetname))
-	//{       // inert light
-	//	REMOVE_ENTITY(ENT(pev));
-	//	return;
-	//}
+	if ( FStringNull(pev->targetname) && !( pev->spawnflags & (SF_LIGHT_DRAW_FLARE | SF_LIGHT_EMIT_ELIGHT | SF_LIGHT_EMIT_DLIGHT | SF_LIGHT_EMIT_SUNFLARE) ) )
+	{       // inert light
+		REMOVE_ENTITY(ENT(pev));
+		return;
+	}
 	
 	PRECACHE_MODEL( "sprites/null.spr" );
 	SET_MODEL( ENT(pev), "sprites/null.spr" );
@@ -218,7 +217,47 @@ void CLight::SendClientInfo( CBaseEntity* pEntity )
 // shut up spawn functions for new spotlights
 //
 LINK_ENTITY_TO_CLASS( light_spot, CLight );
-LINK_ENTITY_TO_CLASS( dir_light, CLight );
+
+//================================================================
+// 
+//	CDirLight
+//	Special light entities that cast better looking per-vertex lighting
+//	onto entities.
+// 
+//================================================================
+
+class CDirLight : public CLight
+{
+public:
+	void	Spawn( void );
+private:
+	int		m_iStyle;
+	int		m_iszPattern;
+};
+
+LINK_ENTITY_TO_CLASS( dir_light, CDirLight );
+
+//================================================================
+//	Spawn
+//================================================================
+
+void CDirLight::Spawn( void )
+{
+	PRECACHE_MODEL( "sprites/null.spr" );
+	SET_MODEL( ENT(pev), "sprites/null.spr" );
+
+	pev->effects = EF_NODRAW | EF_EMIT_ELIGHT;
+
+	if (m_iStyle >= 32)
+	{
+		if (FBitSet(pev->spawnflags, SF_LIGHT_START_OFF))
+			LIGHT_STYLE(m_iStyle, "a");
+		else if (m_iszPattern)
+			LIGHT_STYLE(m_iStyle, (char *)STRING( m_iszPattern ));
+		else
+			LIGHT_STYLE(m_iStyle, "m");
+	}
+}
 
 //================================================================
 // 
